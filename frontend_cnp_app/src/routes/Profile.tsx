@@ -179,7 +179,7 @@ export function Profile(): JSX.Element {
               id="current_role"
               value={currentRole}
               onChange={(e) => setCurrentRole(e.target.value)}
-              disabled={disabled}
+              disabled={disabled || (roles.length === 0 && !error)}
               style={{
                 padding: "10px 12px",
                 borderRadius: 8,
@@ -188,13 +188,18 @@ export function Profile(): JSX.Element {
                 color: "var(--ocean-text)",
               }}
             >
-              <option value="">Select current role</option>
+              <option value="">{loading ? "Loading roles…" : "Select current role"}</option>
               {roleOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
             </select>
+            {(!loading && !error && roles.length === 0) && (
+              <div role="note" style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>
+                No roles in catalog yet. Ask an admin to seed roles via the Admin console.
+              </div>
+            )}
           </div>
 
           <div style={{ display: "grid", gap: 6 }}>
@@ -203,7 +208,7 @@ export function Profile(): JSX.Element {
               id="target_role"
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
-              disabled={disabled}
+              disabled={disabled || (roles.length === 0 && !error)}
               style={{
                 padding: "10px 12px",
                 borderRadius: 8,
@@ -212,7 +217,7 @@ export function Profile(): JSX.Element {
                 color: "var(--ocean-text)",
               }}
             >
-              <option value="">Select target role</option>
+              <option value="">{loading ? "Loading roles…" : "Select target role"}</option>
               {roleOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -222,6 +227,11 @@ export function Profile(): JSX.Element {
             <div style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>
               Your readiness and gap breakdown are calculated against this target role.
             </div>
+            {(!loading && !error && roles.length === 0) && (
+              <div role="note" style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>
+                No roles in catalog yet. Admins can upload Role Navigator/Role Cards in Admin → Seed.
+              </div>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

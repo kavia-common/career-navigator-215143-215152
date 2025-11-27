@@ -12,61 +12,88 @@ import "../styles/graph.css";
 type RoleNode = { id: string; title?: string; group?: string };
 type RoleAdjacencyEdge = { source: string; target: string; weight?: number };
 
-const roleTitles: Record<string, string> = {
-  CA: "Chief Architect",
-  CTO: "Chief Technology Officer",
-  CIO: "Chief Information Officer",
-  CDAO: "Chief Data & Analytics Officer",
-  CInO: "Chief Innovation Officer",
-  CPTO: "Chief Product & Technology Officer",
-  CTrO: "Chief Transformation Officer",
-  FCTO: "Functional CTO",
-  Infra: "Infrastructure Leader",
-  Ops: "Operations Leader",
-  PMO: "PMO Leader",
-  DigProd: "Digital Product Leader",
-};
-
-const seedEdges: RoleAdjacencyEdge[] = [
-  { source: "CA", target: "CTO", weight: 5 },
-  { source: "CIO", target: "CTO", weight: 4 },
-  { source: "CDAO", target: "CTO", weight: 3 },
-  { source: "CInO", target: "CTO", weight: 3 },
-  { source: "CPTO", target: "CTO", weight: 4 },
-  { source: "CTrO", target: "CTO", weight: 2 },
-  { source: "FCTO", target: "CTO", weight: 2 },
-  { source: "Infra", target: "CTO", weight: 3 },
-  { source: "Ops", target: "CTO", weight: 3 },
-  { source: "PMO", target: "CTO", weight: 2 },
-  { source: "DigProd", target: "CTO", weight: 4 },
-  { source: "CTO", target: "CA", weight: 5 },
-  { source: "CTO", target: "CIO", weight: 4 },
-  { source: "CTO", target: "CDAO", weight: 3 },
-  { source: "CTO", target: "CInO", weight: 3 },
-  { source: "CTO", target: "CPTO", weight: 4 },
-  { source: "CTO", target: "CTrO", weight: 2 },
-  { source: "CTO", target: "FCTO", weight: 2 },
-  { source: "CTO", target: "Infra", weight: 3 },
-  { source: "CTO", target: "Ops", weight: 3 },
-  { source: "CTO", target: "PMO", weight: 2 },
-  { source: "CTO", target: "DigProd", weight: 4 },
-];
-
-const seedNodes: RoleNode[] = Array.from(new Set(seedEdges.flatMap((e) => [e.source, e.target]))).map((id) => ({
-  id,
-  title: roleTitles[id] ?? id,
-  group: "role",
-}));
+type DbRole = { code: string; name?: string | null };
+type DbAdj = { source: string; target: string; weight?: number | null };
 
 export function Graph(): JSX.Element {
-  const [targetRoleId, setTargetRoleId] = useState<string>("CTO");
+  const [targetRoleId, setTargetRoleId] = useState<string>("");
   const [minWeight, setMinWeight] = useState<number>(1);
   const [gap, setGap] = useState<GapAnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [cool, setCool] = useState(false);
 
-  const nodes = seedNodes;
-  const edges = seedEdges;
+  const [nodes, setNodes] = useState<RoleNode[]>([]);
+  const [edges, setEdges] = useState<RoleAdjacencyEdge[]>([]);
+  const [rolesLoaded, setRolesLoaded] = useState<boolean>(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        // fetch roles
+        const { data: roles, error: rerr } = await supabase.from("roles").select("code,name");
+        if (rerr) throw rerr;
+        // fetch adjacency
+        const { data: adjs, error: aerr } = await supabase.from("role_adjacency").select("source,target,weight");
+        if (aerr) throw aerr;
+
+        if (!active) return;
+
+        const hasDb = Array.isArray(roles) && roles.length > 0;
+        if (hasDb) {
+          const ns: RoleNode[] = (roles as DbRole[]).map((r) => ({
+            id: r.code,
+            title: r.name || r.code,
+            group: "role",
+          }));
+          const es: RoleAdjacencyEdge[] = (adjs as DbAdj[] || []).map((a) => ({
+            source: a.source,
+            target: a.target,
+            weight: typeof a.weight === "number" ? Math.max(1, Math.round((a.weight || 0) * 5)) : 1,
+          }));
+          setNodes(ns);
+          setEdges(es);
+          // default target
+          setTargetRoleId(ns[0]?.id || "");
+        } else {
+          // fallback to minimal static when DB empty
+          const fallbackEdges: RoleAdjacencyEdge[] = [
+            { source: "CA", target: "CTO", weight: 5 },
+            { source: "CIO", target: "CTO", weight: 4 },
+          ];
+          const roleTitles: Record<string, string> = { CA: "Chief Architect", CTO: "Chief Technology Officer", CIO: "Chief Information Officer" };
+          const fallbackNodes: RoleNode[] = Array.from(new Set(fallbackEdges.flatMap((e) => [e.source, e.target]))).map((id) => ({
+            id,
+            title: roleTitles[id] ?? id,
+            group: "role",
+          }));
+          setNodes(fallbackNodes);
+          setEdges(fallbackEdges);
+          setTargetRoleId(fallbackNodes[0]?.id || "");
+        }
+        setRolesLoaded(true);
+      } catch {
+        // If fetch fails, keep minimal static fallback
+        const fallbackEdges: RoleAdjacencyEdge[] = [
+          { source: "CA", target: "CTO", weight: 5 },
+          { source: "CIO", target: "CTO", weight: 4 },
+        ];
+        const roleTitles: Record<string, string> = { CA: "Chief Architect", CTO: "Chief Technology Officer", CIO: "Chief Information Officer" };
+        const fallbackNodes: RoleNode[] = Array.from(new Set(fallbackEdges.flatMap((e) => [e.source, e.target]))).map((id) => ({
+          id,
+          title: roleTitles[id] ?? id,
+          group: "role",
+        }));
+        if (active) {
+          setNodes(fallbackNodes);
+          setEdges(fallbackEdges);
+          setTargetRoleId(fallbackNodes[0]?.id || "");
+          setRolesLoaded(true);
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const filteredEdges = useMemo(() => edges.filter((e) => (e.weight ?? 1) >= minWeight), [edges, minWeight]);
 
@@ -105,6 +132,11 @@ export function Graph(): JSX.Element {
   return (
     <section className="container" aria-labelledby="graph-title">
       <h1 id="graph-title">Role Graph</h1>
+      {rolesLoaded && nodes.length === 0 && (
+        <div role="note" style={{ color: "#9CA3AF", marginTop: 6 }}>
+          No roles in catalog yet. Admins: seed roles via Admin console to enable the graph.
+        </div>
+      )}
 
       <div className="card mt-4">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>

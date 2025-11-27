@@ -446,6 +446,9 @@ export function Admin(): JSX.Element {
       <p className="description">
         Upload XLSX/TXT files (attachments listed below), parse deterministically, preview diffs, and seed Supabase via an idempotent Edge Function.
       </p>
+      <div role="note" style={{ color: "#6B7280", marginTop: 6 }}>
+        Tip: The Profile page role selectors remain empty until roles are seeded here.
+      </div>
 
       <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
         <div>

@@ -92,13 +92,18 @@ export function Explore(): JSX.Element {
             onChange={(e) => setSourceRole(e.target.value)}
             className="input"
           >
-            <option value="">Select current role…</option>
+            <option value="">{roles.length === 0 ? "No roles available" : "Select current role…"}</option>
             {roleOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
           </select>
+          {roles.length === 0 && (
+            <div role="note" style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>
+              No roles in catalog yet. Site admins can seed roles in the Admin console.
+            </div>
+          )}
         </div>
       </div>
 

@@ -191,6 +191,23 @@ export default function Dashboard(): JSX.Element {
     }} />;
   };
 
+  const [hasAnyRoles, setHasAnyRoles] = useState<boolean | null>(null);
+  useEffect(() => {
+    // health probe: are there any roles yet?
+    (async () => {
+      try {
+        const { data, error } = await supabase.from("roles").select("code").limit(1);
+        if (error) {
+          setHasAnyRoles(null);
+        } else {
+          setHasAnyRoles((data || []).length > 0);
+        }
+      } catch {
+        setHasAnyRoles(null);
+      }
+    })();
+  }, []);
+
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <header>
@@ -198,6 +215,11 @@ export default function Dashboard(): JSX.Element {
         <p style={{ marginTop: 4, color: "#6B7280" }}>
           Track your readiness and close gaps toward your target role.
         </p>
+        {hasAnyRoles === false && (
+          <div role="note" style={{ marginTop: 6, color: "#9CA3AF" }}>
+            No roles in catalog yet. Ask an admin to seed roles in the Admin console.
+          </div>
+        )}
       </header>
 
       {loading ? (
