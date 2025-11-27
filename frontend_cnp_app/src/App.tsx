@@ -15,7 +15,7 @@ import {
   CompetencyDetail,
 } from "./routes";
 import { Sponsors, Notifications } from "./routes";
-import { supabase } from "./lib/supabaseClient";
+import { supabase, getSupabaseEnv } from "./lib/supabaseClient";
 
 /**
  * Ocean Professional layout:
@@ -70,13 +70,25 @@ function useIsAdmin(): boolean | null {
 export function AuthGuard({ element, requireAuth = true, adminOnly = false }: GuardedRouteProps): JSX.Element {
   /**
    * Guards a route based on Supabase auth session; supports admin-only using derived isAdmin state.
+   * Adds timeouts and graceful fallbacks to prevent infinite loading or redirect loops.
    */
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [timeoutFired, setTimeoutFired] = useState(false);
+  // Always declare hooks at top-level (rules-of-hooks)
+  const [adminTimeout, setAdminTimeout] = useState(false);
   const isAdmin = useIsAdmin();
 
   useEffect(() => {
     let mounted = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // Bound initial readiness with a timeout (5s)
+    timer = setTimeout(() => {
+      if (!mounted) return;
+      setTimeoutFired(true);
+      setReady(true); // force ready to avoid infinite spinner
+    }, 5000);
 
     // initial check
     supabase.auth.getSession().then(({ data }) => {
@@ -84,6 +96,10 @@ export function AuthGuard({ element, requireAuth = true, adminOnly = false }: Gu
       const hasSession = !!data.session?.user;
       setAuthed(hasSession);
       setReady(true);
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
     });
 
     // subscribe to session changes
@@ -93,25 +109,48 @@ export function AuthGuard({ element, requireAuth = true, adminOnly = false }: Gu
 
     return () => {
       mounted = false;
+      if (timer) clearTimeout(timer);
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  // Bounded admin-only wait (5s). Run this effect unconditionally; it only matters when adminOnly is true.
+  useEffect(() => {
+    if (!adminOnly) {
+      setAdminTimeout(false);
+      return;
+    }
+    const t = setTimeout(() => setAdminTimeout(true), 5000);
+    return () => clearTimeout(t);
+  }, [adminOnly]);
 
   if (!requireAuth) {
     return element;
   }
 
+  // If not ready, show short bounded loading
   if (!ready) {
     return <div className="container" aria-busy="true">Loading…</div>;
   }
 
+  // After timeout: degrade gracefully - render app shell with notice instead of looping forever
   if (!authed) {
+    if (timeoutFired) {
+      return (
+        <div className="container">
+          <div role="alert" className="alert alert-error" style={{ marginBottom: 12 }}>
+            You are not signed in. Please sign in to continue.
+          </div>
+          <Navigate to="/login" replace />
+        </div>
+      );
+    }
     return <Navigate to="/login" replace />;
   }
 
   if (adminOnly) {
-    if (isAdmin === null) {
-      // Wait until admin state is resolved to avoid flicker
+    if (isAdmin === null && !adminTimeout) {
+      // Wait until admin state is resolved to avoid flicker, but bounded
       return <div className="container" aria-busy="true">Checking permissions…</div>;
     }
     if (!isAdmin) {
@@ -130,12 +169,23 @@ export default function App(): JSX.Element {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [navOpen, setNavOpen] = useState<boolean>(true);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
+  const [envIssue, setEnvIssue] = useState<string | null>(null);
   const location = useLocation();
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Check env configuration to surface clear errors early but do not block UI
+  useEffect(() => {
+    const { url, key } = getSupabaseEnv();
+    if (!url || !key) {
+      setEnvIssue("Supabase is not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_KEY.");
+    } else {
+      setEnvIssue(null);
+    }
+  }, []);
 
   // Close menus on route change
   useEffect(() => {
@@ -180,7 +230,7 @@ export default function App(): JSX.Element {
         const q2 = await supabase.from("admin_users").select("email").eq("email", email).maybeSingle();
         if (q2.data?.email) return true;
       } catch {
-        // ignore table absence
+        // ignore table absence / RLS errors - treat as non-admin
       }
       return false;
     } catch {
@@ -200,10 +250,25 @@ export default function App(): JSX.Element {
       setAppAuthState(next);
       if (u?.id) {
         setIsAdmin(null); // reset while resolving
-        const admin = await resolveIsAdmin();
-        if (!mounted) return;
-        setIsAdmin(admin);
-        setAppAuthState({ isAdmin: admin });
+        // Resolve admin with a bounded timeout
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        try {
+          const admin = await Promise.race<boolean>([
+            resolveIsAdmin(),
+            new Promise<boolean>((resolve) => {
+              const id = setTimeout(() => {
+                clearTimeout(id);
+                resolve(false);
+              }, 5000);
+            }),
+          ]);
+          if (!mounted) return;
+          setIsAdmin(admin);
+          setAppAuthState({ isAdmin: admin });
+        } finally {
+          clearTimeout(timer);
+        }
       } else {
         setIsAdmin(null);
         setAppAuthState({ isAdmin: null });
@@ -220,22 +285,35 @@ export default function App(): JSX.Element {
         window.history.pushState({}, "", "/login?mode=recover");
       }
 
-      // On sign-in or token refresh, ensure profile row exists
+      // On sign-in or token refresh, ensure profile row exists (non-blocking and best-effort)
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         try {
           const { ensureCurrentUserProfile } = await import("./lib/api");
-          await ensureCurrentUserProfile();
-          // Optional: warm read of profile
-          await supabase.from("profiles").select("id").limit(1);
+          // Do not await indefinitely; race with timeout
+          await Promise.race([
+            ensureCurrentUserProfile(),
+            new Promise((resolve) => setTimeout(resolve, 5000)),
+          ]);
+          // Optional: warm read of profile (non-blocking)
+          (async () => {
+            try {
+              await supabase.from("profiles").select("id").limit(1);
+            } catch {
+              // ignore
+            }
+          })();
         } catch {
           // ignore
         }
       }
 
-      // Resolve admin after auth state updates
+      // Resolve admin after auth state updates (bounded)
       if (u?.id) {
         setIsAdmin(null);
-        const admin = await resolveIsAdmin();
+        const admin = await Promise.race<boolean>([
+          resolveIsAdmin(),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000)),
+        ]);
         setIsAdmin(admin);
         setAppAuthState({ isAdmin: admin });
       } else {
@@ -292,7 +370,13 @@ export default function App(): JSX.Element {
           </Link>
         </div>
         <div className="navbar__center" />
-        <div className="navbar__right" style={{ display: "flex", gap: 8, position: "relative" }} ref={userMenuRef}>
+        <div className="navbar__right" style={{ display: "flex", gap: 8, position: "relative", alignItems: "center" }} ref={userMenuRef}>
+          {/* Env issue banner in header for visibility */}
+          {envIssue && (
+            <span role="status" style={{ color: "#B45309", background: "#FEF3C7", border: "1px solid #F59E0B", padding: "4px 8px", borderRadius: 6 }}>
+              {envIssue}
+            </span>
+          )}
           <button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
             {themeLabel}
           </button>
