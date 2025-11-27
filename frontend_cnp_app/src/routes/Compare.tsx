@@ -63,18 +63,24 @@ const Compare: React.FC = () => {
         setLoading(true);
         setErr('');
         // Fetch per-role competencies (deterministic baseline)
-        const [src, tgt] = await Promise.all([
+        const [srcRes, tgtRes] = await Promise.all([
           fetchRoleCompetencies(sourceRoleId),
           fetchRoleCompetencies(targetRoleId),
         ]);
         if (!active) return;
-        setSourceComps(src);
-        setTargetComps(tgt);
+
+        const src = srcRes.error ? [] : (srcRes.data || []);
+        const tgt = tgtRes.error ? [] : (tgtRes.data || []);
+        setSourceComps(src as RoleCompetency[]);
+        setTargetComps(tgt as RoleCompetency[]);
 
         // Call rpc for authoritative gap aggregation (if available)
         let rpc: GapAnalysisResult | null = null;
         try {
-          rpc = await fetchGapAnalysis(sourceRoleId, targetRoleId);
+          const gapRes = await fetchGapAnalysis(sourceRoleId, targetRoleId);
+          if (!gapRes.error) {
+            rpc = (gapRes.data as any) || null;
+          }
         } catch (rpcErr) {
           // Non-fatal; fall back to deterministic local computation
           // eslint-disable-next-line no-console
@@ -92,24 +98,24 @@ const Compare: React.FC = () => {
           const overlap = src
             .filter(s => {
               const t = targetMap.get(s.competency_id);
-              return !!t && (s.proficiency || 0) >= (t.proficiency || 0);
+              return !!t && (Number((s as any).proficiency ?? s.target ?? 0) >= Number((t as any).proficiency ?? t.target ?? 0));
             })
             .map(s => ({
               competency_id: s.competency_id,
-              name: (s.competency_name ?? "") as string,
-              source_level: s.proficiency || 0,
-              target_level: targetMap.get(s.competency_id)?.proficiency || 0,
+              name: (s as any).competency_name ?? "",
+              source_level: Number((s as any).proficiency ?? s.target ?? 0),
+              target_level: Number((targetMap.get(s.competency_id) as any)?.proficiency ?? targetMap.get(s.competency_id)?.target ?? 0),
             }));
 
           const deficits = Array.from(targetMap.values())
             .map(t => {
               const s = sourceMap.get(t.competency_id);
-              const sLevel = s?.proficiency ?? 0;
-              const tLevel = t.proficiency ?? 0;
+              const sLevel = Number((s as any)?.proficiency ?? s?.target ?? 0);
+              const tLevel = Number((t as any)?.proficiency ?? t?.target ?? 0);
               const delta = Math.max(0, tLevel - sLevel);
               return {
                 competency_id: t.competency_id,
-                name: (t.competency_name ?? "") as string,
+                name: (t as any).competency_name ?? "",
                 source_level: sLevel,
                 target_level: tLevel,
                 delta,
@@ -206,12 +212,12 @@ const Compare: React.FC = () => {
     const sourceMap = new Map(sourceComps.map(c => [c.competency_id, c]));
     const rows = Array.from(targetMap.values()).map(t => {
       const s = sourceMap.get(t.competency_id);
-      const sLevel = s?.proficiency ?? 0;
-      const tLevel = t.proficiency ?? 0;
+      const sLevel = Number((s as any)?.proficiency ?? s?.target ?? 0);
+      const tLevel = Number((t as any)?.proficiency ?? t?.target ?? 0);
       const delta = Math.max(0, tLevel - sLevel);
       return {
         competency_id: t.competency_id,
-        name: t.competency_name,
+        name: (t as any).competency_name,
         source_level: sLevel,
         target_level: tLevel,
         delta,
@@ -343,23 +349,54 @@ const Compare: React.FC = () => {
           <div className="app-card" style={{ maxHeight: 560, overflowY: 'auto' }}>
             {gap?.recommendations?.length ? (
               <ul className="app-list">
-                {gap.recommendations.map(item => (
-                  <li key={item.id} className="app-list-item">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <a href={item.url} target="_blank" rel="noreferrer" className="app-link">
-                          {item.title}
-                        </a>
-                        <span className="badge" style={{ background: '#e5e7eb', color: '#374151' }}>
-                          {item.type || 'Resource'}
-                        </span>
+                {gap.recommendations.map((item, idx) => {
+                  const isLearning = typeof (item as any).title === 'string' || typeof (item as any).url === 'string';
+                  const key = (item as any).id ?? `${idx}-${(item as any).competency_id ?? 'txt'}`;
+                  if (isLearning) {
+                    const li = item as LearningItem & {
+                      type?: string | null;
+                      competency_id?: string;
+                      difficulty?: string | null;
+                      provider?: string | null;
+                    };
+                    return (
+                      <li key={key} className="app-list-item">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <a href={li.url || '#'} target="_blank" rel="noreferrer" className="app-link">
+                              {li.title || 'Resource'}
+                            </a>
+                            <span className="badge" style={{ background: '#e5e7eb', color: '#374151' }}>
+                              {li.type || 'Resource'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#6b7280' }}>
+                            Competency: {competencyNameForId(li.competency_id as any, targetComps) || 'N/A'} • Difficulty: {li.difficulty || 'N/A'} {li.provider ? `• ${li.provider}` : ''}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  }
+                  // Text-only suggestion
+                  const txt = item as { text: string; competency_id?: string };
+                  return (
+                    <li key={key} className="app-list-item">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <span className="app-link">{txt.text}</span>
+                          <span className="badge" style={{ background: '#e5e7eb', color: '#374151' }}>
+                            Suggestion
+                          </span>
+                        </div>
+                        {txt.competency_id && (
+                          <div style={{ fontSize: 12, color: '#6b7280' }}>
+                            Competency: {competencyNameForId(txt.competency_id, targetComps) || 'N/A'}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>
-                        Competency: {competencyNameForId(item.competency_id, targetComps) || 'N/A'} • Difficulty: {item.difficulty || 'N/A'} {item.provider ? `• ${item.provider}` : ''}
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div style={{ color: '#6b7280' }}>No recommendations yet. Select roles to compute gaps.</div>
