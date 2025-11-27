@@ -416,10 +416,26 @@ export function DevPlan(): JSX.Element {
       {gap && (
         <div style={{ padding: 12, background: "var(--ocean-surface)", borderRadius: 8, border: "1px solid var(--border-color)", marginBottom: 12 }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>
-            Readiness {(Number(gap.readiness ?? 0) * 100).toFixed(0)}% • Overlap {(Number((gap as any).overlap ?? gap.overlapRatio ?? 0) * 100).toFixed(0)}%
+            {/*
+              Safely render readiness/overlap with defaults.
+              Some backends may return overlapRatio, others overlap. Use either, defaulting to 0.
+            */}
+            Readiness {(Number(gap?.readiness ?? 0) * 100).toFixed(0)}% • Overlap {(Number(((gap as any)?.overlap ?? gap?.overlapRatio ?? 0)) * 100).toFixed(0)}%
           </div>
           <div style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>
-            Top gaps: {gap.breakdown.filter(b => b.delta > 0).slice(0, 5).map(b => b.competency_id).join(", ") || "None"}
+            {/*
+              Null-safe guard for gap.breakdown which can be undefined.
+              Compute top gaps string or show 'None'.
+            */}
+            {(() => {
+              const topGaps =
+                (gap?.breakdown ?? [])
+                  .filter((b) => b && typeof b.delta === "number" && b.delta > 0)
+                  .slice(0, 5)
+                  .map((b) => b.competency_id)
+                  .join(", ") || "None";
+              return <>Top gaps: {topGaps}</>;
+            })()}
           </div>
         </div>
       )}
