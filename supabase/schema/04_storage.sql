@@ -69,3 +69,44 @@ create policy "evidence objects list own"
 -- Notes:
 -- - Signed URLs (generated server-side by Supabase) bypass row-level read; they are time-limited and safe for end-user consumption.
 -- - Evidence table stores storage_path to correlate DB row to storage object.
+
+--------------------------------------------------------------------------------
+-- Additional bucket: exports (private) for generated profile PDFs
+do $$
+begin
+  perform 1 from storage.buckets where name = 'exports';
+  if not found then
+    perform storage.create_bucket('exports', false, 'generated exports (PDF) bucket', false);
+  end if;
+end$$;
+
+-- Allow authenticated users to write only within their own prefix: `${auth.uid()}/...`
+drop policy if exists "exports objects upload own" on storage.objects;
+create policy "exports objects upload own"
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    bucket_id = 'exports'
+    and (position((auth.uid())::text || '/' in (coalesce(storage.objects.name, ''))) = 1)
+  );
+
+drop policy if exists "exports objects select own" on storage.objects;
+create policy "exports objects select own"
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    bucket_id = 'exports'
+    and (position((auth.uid())::text || '/' in (coalesce(storage.objects.name, ''))) = 1)
+  );
+
+drop policy if exists "exports objects delete own" on storage.objects;
+create policy "exports objects delete own"
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    bucket_id = 'exports'
+    and (position((auth.uid())::text || '/' in (coalesce(storage.objects.name, ''))) = 1)
+  );
