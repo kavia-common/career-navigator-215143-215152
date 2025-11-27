@@ -5,6 +5,12 @@
   --color-error: #EF4444;
   --color-surface: #F9FAFB;
   --color-text: #111827;
+
+  /* Additional Ocean Professional variables used in layout */
+  --ocean-bg: #FFFFFF;
+  --ocean-surface: #F9FAFB;
+  --border-color: rgba(0,0,0,0.08);
+  --shadow-1: 0 4px 14px rgba(0,0,0,0.06);
 }
 
 body {

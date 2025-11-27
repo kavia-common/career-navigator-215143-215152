@@ -96,7 +96,7 @@ const Compare: React.FC = () => {
             })
             .map(s => ({
               competency_id: s.competency_id,
-              name: s.competency_name,
+              name: s.competency_name ?? "",
               source_level: s.proficiency || 0,
               target_level: targetMap.get(s.competency_id)?.proficiency || 0,
             }));

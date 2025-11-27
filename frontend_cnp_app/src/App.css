@@ -95,3 +95,60 @@
   padding: 2px 8px;
   border-radius: 9999px;
 }
+
+/* Ocean Professional base styles for layout/navigation */
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ocean-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.navlink {
+  display: block;
+  padding: 8px 10px;
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: 8px;
+}
+.navlink:hover {
+  background: rgba(0,0,0,0.04);
+}
+.navlink.active {
+  background: rgba(55,65,81,0.1);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.theme-toggle {
+  background: var(--color-surface);
+  border: 1px solid #E5E7EB;
+  color: var(--color-text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.container {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .container {
+    padding: 12px;
+  }
+}
