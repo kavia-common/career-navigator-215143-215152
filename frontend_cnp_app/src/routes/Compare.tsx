@@ -126,7 +126,7 @@ const Compare: React.FC = () => {
           };
 
           const localGap: GapAnalysisResult = {
-            overlap,
+            overlaps: overlap,
             deficits,
             recommendations: [], // Filled further below using learning items query
             summary,

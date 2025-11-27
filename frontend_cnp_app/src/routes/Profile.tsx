@@ -76,7 +76,7 @@ export function Profile(): JSX.Element {
           const gap = await rpcGapAnalysis(pid, trg);
           if (!gap.error && gap.data) {
             setReadiness(gap.data.readiness);
-            setOverlap(gap.data.overlap);
+            setOverlap((gap.data as any).overlap ?? gap.data.overlapRatio ?? null);
           }
         }
       } catch (e) {

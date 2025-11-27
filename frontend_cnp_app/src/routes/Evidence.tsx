@@ -71,16 +71,22 @@ export function Evidence(): JSX.Element {
 
       let storage_path: string | undefined = undefined;
       if (file) {
-        const up = await uploadEvidenceFile(uid, file);
+        const up = await uploadEvidenceFile(file, { title, description });
         if (up.error) throw new Error(up.error);
-        storage_path = up.data?.path;
+        // Row already inserted by uploadEvidenceFile; refresh and return early.
+        await refresh();
+        setFile(null);
+        setTitle("");
+        setDescription("");
+        setCompetencyId("");
+        setUploading(false);
+        return;
       }
 
       const created = await createEvidence({
-        title: title || (file?.name ?? "Untitled"),
+        title: title || "Untitled",
         description: description || undefined,
-        competency_id: competencyId || undefined,
-        storage_path,
+        url: undefined,
       });
       if (created.error) throw new Error(created.error);
 

@@ -14,6 +14,7 @@ import type {
   PlanItem,
   UUID,
   UserProfile,
+  UIPlanItem,
 } from "../lib/types";
 
 // UI helpers
@@ -27,13 +28,7 @@ const PHASE_LABEL: Record<Phase, string> = {
 const PRIORITIES = ["P1", "P2", "P3"] as const;
 const STATUSES = ["Not Started", "In Progress", "Blocked", "Done"] as const;
 
-// Extend PlanItem in UI with phase/priority/status (stored using flexible fields via description suffix for MVP)
-interface UIPlanItem extends PlanItem {
-  phase?: Phase;
-  priority?: typeof PRIORITIES[number];
-  status?: typeof STATUSES[number];
-  optimistic?: boolean; // UI flag
-}
+
 
 // Utilities to encode/decode extra fields into description for MVP without altering DB schema
 const SEP = "\n---meta---\n";
@@ -421,7 +416,7 @@ export function DevPlan(): JSX.Element {
       {gap && (
         <div style={{ padding: 12, background: "var(--ocean-surface)", borderRadius: 8, border: "1px solid var(--border-color)", marginBottom: 12 }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>
-            Readiness {(gap.readiness * 100).toFixed(0)}% • Overlap {(gap.overlap * 100).toFixed(0)}%
+            Readiness {(Number(gap.readiness ?? 0) * 100).toFixed(0)}% • Overlap {(Number((gap as any).overlap ?? gap.overlapRatio ?? 0) * 100).toFixed(0)}%
           </div>
           <div style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>
             Top gaps: {gap.breakdown.filter(b => b.delta > 0).slice(0, 5).map(b => b.competency_id).join(", ") || "None"}

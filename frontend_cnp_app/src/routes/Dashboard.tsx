@@ -86,7 +86,8 @@ export default function Dashboard(): JSX.Element {
       if (!kpi.error && kpi.data) {
         setKpiCounts(kpi.data.counts || null);
         if (typeof kpi.data.readiness === "number") setReadiness(kpi.data.readiness);
-        if (typeof kpi.data.overlap === "number") setOverlap(kpi.data.overlap);
+        if (typeof (kpi.data as any).overlap === "number") setOverlap((kpi.data as any).overlap);
+        else if (typeof (kpi.data as any).overlapRatio === "number") setOverlap((kpi.data as any).overlapRatio);
       }
 
       if (uid && trg) {
@@ -96,7 +97,8 @@ export default function Dashboard(): JSX.Element {
           const b = Array.isArray(d.breakdown) ? d.breakdown : [];
           setBreakdown(normalizeBreakdown(b));
           if (typeof d.readiness === "number") setReadiness(d.readiness);
-          if (typeof d.overlap === "number") setOverlap(d.overlap);
+          if (typeof (d as any).overlap === "number") setOverlap((d as any).overlap);
+          else if (typeof (d as any).overlapRatio === "number") setOverlap((d as any).overlapRatio);
         } else {
           setError(gap.error);
         }
