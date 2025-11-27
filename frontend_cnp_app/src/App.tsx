@@ -30,6 +30,11 @@ interface SessionState {
   email: string | null;
 }
 
+// App-scoped admin state
+interface AppAuthState extends SessionState {
+  isAdmin: boolean | null; // null = unknown/pending
+}
+
 /** GuardedRoute props */
 interface GuardedRouteProps {
   element: JSX.Element;
@@ -37,15 +42,35 @@ interface GuardedRouteProps {
   adminOnly?: boolean;
 }
 
-/** Role check stub for future expansion */
-const useIsAdmin = (): boolean => {
-  // In future, fetch from profile/claims. For now, false by default.
-  return false;
-};
+/**
+ * PUBLIC_INTERFACE
+ * useIsAdmin hook derives the isAdmin state from AppAuthState propagated via window-scoped singleton.
+ * We avoid React Context to minimize invasive changes; this module-scope store is sufficient for this task.
+ */
+let __appAuthState: AppAuthState = { userId: null, email: null, isAdmin: null };
+const listeners = new Set<() => void>();
+function setAppAuthState(next: Partial<AppAuthState>) {
+  __appAuthState = { ...__appAuthState, ...next };
+  listeners.forEach((cb) => cb());
+}
+function useIsAdmin(): boolean | null {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const cb = () => setTick((t) => t + 1);
+    listeners.add(cb);
+    return () => {
+      listeners.delete(cb);
+      // Explicitly return void to satisfy EffectCallback typing
+    };
+  }, []);
+  return __appAuthState.isAdmin;
+}
 
 // PUBLIC_INTERFACE
 export function AuthGuard({ element, requireAuth = true, adminOnly = false }: GuardedRouteProps): JSX.Element {
-  /** Guards a route based on Supabase auth session; supports admin-only stub. */
+  /**
+   * Guards a route based on Supabase auth session; supports admin-only using derived isAdmin state.
+   */
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(false);
   const isAdmin = useIsAdmin();
@@ -84,8 +109,14 @@ export function AuthGuard({ element, requireAuth = true, adminOnly = false }: Gu
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/" replace />;
+  if (adminOnly) {
+    if (isAdmin === null) {
+      // Wait until admin state is resolved to avoid flicker
+      return <div className="container" aria-busy="true">Checking permissions…</div>;
+    }
+    if (!isAdmin) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return element;
@@ -96,6 +127,7 @@ export default function App(): JSX.Element {
   /** Root application with Ocean Professional layout, nav, and guarded routes. */
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [session, setSession] = useState<SessionState>({ userId: null, email: null });
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [navOpen, setNavOpen] = useState<boolean>(true);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const location = useLocation();
@@ -130,19 +162,59 @@ export default function App(): JSX.Element {
   const toggleTheme = (): void =>
     setTheme((t) => (t === "light" ? "dark" : "light"));
 
-  // Supabase session listener with PASSWORD_RECOVERY handling
+  // Resolve isAdmin from either user_metadata.is_admin or existing admin check in Admin.tsx (admin_users table).
+  const resolveIsAdmin = async (): Promise<boolean> => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      const meta = (user?.user_metadata || {}) as any;
+      if (typeof meta?.is_admin === "boolean") {
+        return !!meta.is_admin;
+      }
+      // Fallback: query admin_users (same logic used in Admin.tsx)
+      try {
+        const email = user?.email || "";
+        const userId = user?.id || "";
+        const q1 = await supabase.from("admin_users").select("user_id").eq("user_id", userId).maybeSingle();
+        if (q1.data?.user_id) return true;
+        const q2 = await supabase.from("admin_users").select("email").eq("email", email).maybeSingle();
+        if (q2.data?.email) return true;
+      } catch {
+        // ignore table absence
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  // Supabase session listener with PASSWORD_RECOVERY handling and admin flag resolution
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       const u = data.session?.user;
-      setSession({ userId: u?.id ?? null, email: u?.email ?? null });
+      const next = { userId: u?.id ?? null, email: u?.email ?? null };
+      setSession(next);
+      setAppAuthState(next);
+      if (u?.id) {
+        setIsAdmin(null); // reset while resolving
+        const admin = await resolveIsAdmin();
+        if (!mounted) return;
+        setIsAdmin(admin);
+        setAppAuthState({ isAdmin: admin });
+      } else {
+        setIsAdmin(null);
+        setAppAuthState({ isAdmin: null });
+      }
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, s) => {
       const u = s?.user;
-      setSession({ userId: u?.id ?? null, email: u?.email ?? null });
+      const next = { userId: u?.id ?? null, email: u?.email ?? null };
+      setSession(next);
+      setAppAuthState(next);
 
       if (event === "PASSWORD_RECOVERY") {
         window.history.pushState({}, "", "/login?mode=recover");
@@ -159,6 +231,17 @@ export default function App(): JSX.Element {
           // ignore
         }
       }
+
+      // Resolve admin after auth state updates
+      if (u?.id) {
+        setIsAdmin(null);
+        const admin = await resolveIsAdmin();
+        setIsAdmin(admin);
+        setAppAuthState({ isAdmin: admin });
+      } else {
+        setIsAdmin(null);
+        setAppAuthState({ isAdmin: null });
+      }
     });
 
     return () => {
@@ -171,8 +254,8 @@ export default function App(): JSX.Element {
     await supabase.auth.signOut();
   };
 
-  // Navigation entries
-  const navItems = [
+  // Navigation entries (conditionally include Admin)
+  const baseNavItems = [
     { to: "/", label: "Dashboard" },
     { to: "/graph", label: "Graph" },
     { to: "/compare", label: "Compare" },
@@ -181,8 +264,8 @@ export default function App(): JSX.Element {
     { to: "/sponsors", label: "Sponsors" },
     { to: "/notifications", label: "Notifications" },
     { to: "/profile", label: "Profile" },
-    { to: "/admin", label: "Admin" },
   ];
+  const navItems = isAdmin ? [...baseNavItems, { to: "/admin", label: "Admin" }] : baseNavItems;
 
   const gridCols = navOpen ? "260px 1fr" : "0px 1fr";
 
@@ -284,7 +367,10 @@ export default function App(): JSX.Element {
           <Route path="/competency" element={<AuthGuard element={<CompetencyDetail />} requireAuth />} />
           <Route path="/sponsors" element={<AuthGuard element={<Sponsors />} requireAuth />} />
           <Route path="/notifications" element={<AuthGuard element={<Notifications />} requireAuth />} />
-          <Route path="/admin" element={<AuthGuard element={<Admin />} requireAuth adminOnly />} />
+          {/* Only register Admin route when admin; otherwise, omit so it's unreachable */}
+          {isAdmin ? (
+            <Route path="/admin" element={<AuthGuard element={<Admin />} requireAuth adminOnly />} />
+          ) : null}
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />

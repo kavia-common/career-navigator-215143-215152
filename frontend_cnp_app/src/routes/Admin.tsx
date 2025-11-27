@@ -430,7 +430,14 @@ export function Admin(): JSX.Element {
   }
 
   if (!isAdmin) {
-    return <section><h1 className="title">Admin</h1><p className="description">Access denied. You are not an admin user.</p></section>;
+    // Fallback guard: render a 403-style message to avoid exposing tools.
+    return (
+      <section>
+        <h1 className="title">Admin</h1>
+        <p className="description">Access denied. You are not an admin user.</p>
+        <p><a href="/" className="navlink">Go back to Dashboard</a></p>
+      </section>
+    );
   }
 
   return (
