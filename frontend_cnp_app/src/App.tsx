@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, NavLink, Route, Routes, Navigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { Link, NavLink, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import "./App.css";
 import "./styles/theme.css";
 import {
@@ -17,7 +17,7 @@ import { supabase } from "./lib/supabaseClient";
 
 /**
  * Ocean Professional layout:
- * - Left navigation (persistent)
+ * - Left navigation (collapsible)
  * - Top header with brand and actions
  * - Main content area renders current route
  */
@@ -94,10 +94,31 @@ export default function App(): JSX.Element {
   /** Root application with Ocean Professional layout, nav, and guarded routes. */
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [session, setSession] = useState<SessionState>({ userId: null, email: null });
+  const [navOpen, setNavOpen] = useState<boolean>(true);
+  const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
+  const location = useLocation();
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Close menus on route change
+  useEffect(() => {
+    setUserMenuOpen(false);
+    // Collapse nav on small screens after navigation
+    if (window.innerWidth < 900) setNavOpen(false);
+  }, [location.pathname]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!userMenuRef.current) return;
+      if (!userMenuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
 
   const themeLabel = useMemo(
     () => (theme === "light" ? "🌙 Dark" : "☀️ Light"),
@@ -143,8 +164,10 @@ export default function App(): JSX.Element {
     { to: "/admin", label: "Admin" },
   ];
 
+  const gridCols = navOpen ? "260px 1fr" : "0px 1fr";
+
   return (
-    <div className="App" style={{ display: "grid", gridTemplateColumns: "260px 1fr", gridTemplateRows: "56px 1fr", minHeight: "100vh" }}>
+    <div className="App" style={{ display: "grid", gridTemplateColumns: gridCols, gridTemplateRows: "56px 1fr", minHeight: "100vh" }}>
       {/* Top header */}
       <header
         className="navbar"
@@ -152,28 +175,53 @@ export default function App(): JSX.Element {
         aria-label="Top navigation"
         style={{ gridColumn: "1 / -1", gridRow: "1" }}
       >
-        <div className="navbar__left">
+        <div className="navbar__left" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            className="theme-toggle"
+            aria-label={navOpen ? "Collapse navigation" : "Expand navigation"}
+            onClick={() => setNavOpen((v) => !v)}
+            style={{ padding: "6px 10px" }}
+          >
+            {navOpen ? "☰" : "☷"}
+          </button>
           <Link className="brand" to="/">
             Career Navigator
           </Link>
         </div>
         <div className="navbar__center" />
-        <div className="navbar__right" style={{ display: "flex", gap: 8 }}>
+        <div className="navbar__right" style={{ display: "flex", gap: 8, position: "relative" }} ref={userMenuRef}>
+          <button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
+            {themeLabel}
+          </button>
           {session.userId ? (
             <>
-              <span style={{ color: "var(--ocean-secondary)", fontSize: 14 }}>{session.email}</span>
-              <button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
-                {themeLabel}
+              <button className="theme-toggle" onClick={() => setUserMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={userMenuOpen}>
+                {session.email ?? "Account"} ⌄
               </button>
-              <button className="theme-toggle" onClick={handleSignOut}>Sign out</button>
+              {userMenuOpen && (
+                <div role="menu" style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "calc(100% + 8px)",
+                  background: "var(--ocean-bg)",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: 8,
+                  boxShadow: "var(--shadow-1)",
+                  minWidth: 180,
+                  padding: 6,
+                  zIndex: 20
+                }}>
+                  <Link className="navlink" to="/profile" role="menuitem">Profile</Link>
+                  <div>
+                    <button className="theme-toggle" onClick={handleSignOut} style={{ width: "100%", marginTop: 6 }}>
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
-            <>
-              <button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
-                {themeLabel}
-              </button>
-              <Link className="navlink" to="/login">Sign in</Link>
-            </>
+            <Link className="navlink" to="/login">Sign in</Link>
           )}
         </div>
       </header>
@@ -186,18 +234,22 @@ export default function App(): JSX.Element {
           gridRow: "2",
           background: "var(--ocean-surface)",
           borderRight: "1px solid rgba(0,0,0,0.06)",
-          padding: "16px 12px",
+          padding: navOpen ? "16px 12px" : "0px",
+          overflow: "hidden",
+          transition: "all 0.2s ease",
         }}
       >
-        <nav>
-          {navItems.map((n) => (
-            <div key={n.to} style={{ marginBottom: 4 }}>
-              <NavLink to={n.to} end className={({ isActive }) => "navlink" + (isActive ? " active" : "")}>
-                {n.label}
-              </NavLink>
-            </div>
-          ))}
-        </nav>
+        {navOpen && (
+          <nav>
+            {navItems.map((n) => (
+              <div key={n.to} style={{ marginBottom: 4 }}>
+                <NavLink to={n.to} end className={({ isActive }) => "navlink" + (isActive ? " active" : "")}>
+                  {n.label}
+                </NavLink>
+              </div>
+            ))}
+          </nav>
+        )}
       </aside>
 
       {/* Main content */}
