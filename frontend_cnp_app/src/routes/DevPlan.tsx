@@ -8,7 +8,7 @@ import {
   getCurrentUserProfile,
 } from "../lib/api";
 import type {
-  GapBreakdown,
+  GapBreakdownRow,
   GapAnalysisResult,
   Plan,
   PlanItem,

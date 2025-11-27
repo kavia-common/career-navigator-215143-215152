@@ -46,7 +46,7 @@ export function Graph(): JSX.Element {
             title: r.name || r.code,
             group: "role",
           }));
-          const es: RoleAdjacencyEdge[] = (adjs as DbAdj[] || []).map((a) => ({
+          const es: RoleAdjacencyEdge[] = ((adjs as DbAdj[]) || []).map((a) => ({
             source: a.source,
             target: a.target,
             weight: typeof a.weight === "number" ? Math.max(1, Math.round((a.weight || 0) * 5)) : 1,
@@ -105,15 +105,17 @@ export function Graph(): JSX.Element {
   const loadGap = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("rpc_gap_analysis", {
-        body: { target_role_id: targetRoleId },
+      // For public graph we may not have a profile; call function allowing only target role.
+      const { data, error } = await (supabase as any).functions.invoke("rpc_gap_analysis", {
+        body: { target_role: targetRoleId },
       });
       if (error) {
         // eslint-disable-next-line no-console
         console.warn("rpc_gap_analysis error:", error.message);
         setGap(null);
       } else {
-        setGap({ target_role_id: targetRoleId, details: data ?? {} });
+        const d: GapAnalysisResult = (data as any) || {};
+        setGap(d);
       }
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -125,7 +127,7 @@ export function Graph(): JSX.Element {
   };
 
   useEffect(() => {
-    loadGap();
+    if (targetRoleId) loadGap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetRoleId]);
 

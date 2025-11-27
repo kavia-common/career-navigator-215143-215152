@@ -5,21 +5,17 @@ import { supabase, getSupabaseEnv } from "../lib/supabaseClient";
  * PUBLIC_INTERFACE
  * SupabaseHealth performs a lightweight connectivity check to Supabase.
  * - It verifies env configuration, attempts auth.getSession(), and performs a trivial select.
- * - Displays a small status badge/panel. In production, it renders nothing by default to stay unobtrusive.
+ * - Displays a small status badge/panel. In production, it renders nothing to stay unobtrusive.
  */
 export default function SupabaseHealth(): JSX.Element | null {
-  // Hide in production to avoid exposing internals; flip SHOW in dev
-  if (process.env.NODE_ENV === "production") {
-    return null;
-  }
-
-  const [status, setStatus] = useState<"idle" | "ok" | "error" | "checking">(
-    "idle"
-  );
+  // Hooks must be called unconditionally
+  const [status, setStatus] = useState<"idle" | "ok" | "error" | "checking">("idle");
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    let mounted = true;
+    // Skip running heavy checks in production to avoid noise; still keep hooks order intact
+    if (process.env.NODE_ENV === "production") return;
+
     const run = async () => {
       setStatus("checking");
       setMessage("Starting health check...");
@@ -35,13 +31,11 @@ export default function SupabaseHealth(): JSX.Element | null {
         // 1) Auth session check (does not require a logged-in user to succeed in connectivity)
         const sessRes = await supabase.auth.getSession();
         if (sessRes.error) {
-          // log but don't immediately fail; continue to basic read to test anon connectivity
           // eslint-disable-next-line no-console
           console.warn("Health: auth.getSession error:", sessRes.error);
         }
 
         // 2) Make a tiny read from a public or harmless table.
-        // Prefer "profiles" if present; fallback to a very cheap RPC-less call e.g. from('profiles').select('*').limit(1)
         const start = Date.now();
         const { data, error } = await supabase.from("profiles").select("id").limit(1);
         const ms = Date.now() - start;
@@ -63,11 +57,13 @@ export default function SupabaseHealth(): JSX.Element | null {
       }
     };
 
-    run();
-    return () => {
-      mounted = false;
-    };
+    void run();
   }, []);
+
+  // In production, render nothing but do not conditionally call hooks
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
 
   const badgeClass =
     status === "ok" ? "chip chip-green" : status === "error" ? "chip chip-red" : "chip chip-amber";
