@@ -23,6 +23,7 @@ export function Evidence(): JSX.Element {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [competencyId, setCompetencyId] = useState<string>("");
+  const [skillId, setSkillId] = useState<string>("");
 
   const competencyOptions = useMemo(
     () => competencies.map((c) => ({ value: c.id, label: c.name })),
@@ -73,12 +74,25 @@ export function Evidence(): JSX.Element {
       if (file) {
         const up = await uploadEvidenceFile(file, { title, description });
         if (up.error) throw new Error(up.error);
-        // Row already inserted by uploadEvidenceFile; refresh and return early.
+        // If competency/skill tags were selected, patch the evidence row
+        if (competencyId || skillId) {
+          // find the last uploaded item by title fallback; better approach would be return row from upload
+          await refresh();
+          // Attempt to find a matching item to update tags
+          const latest = items.find((it) => it.title === (title || file.name));
+          if (latest) {
+            await supabase.from('evidence').update({
+              competency_id: competencyId || null,
+              skill_id: skillId || null,
+            }).eq('id', latest.id);
+          }
+        }
         await refresh();
         setFile(null);
         setTitle("");
         setDescription("");
         setCompetencyId("");
+        setSkillId("");
         setUploading(false);
         return;
       }
@@ -88,6 +102,12 @@ export function Evidence(): JSX.Element {
         description: description || undefined,
         url: undefined,
       });
+      if (!created.error && created.data && (competencyId || skillId)) {
+        await supabase.from('evidence').update({
+          competency_id: competencyId || null,
+          skill_id: skillId || null,
+        }).eq('id', created.data.id);
+      }
       if (created.error) throw new Error(created.error);
 
       // Reset form
@@ -181,6 +201,23 @@ export function Evidence(): JSX.Element {
           </div>
 
           <div style={{ display: "grid", gap: 6 }}>
+            <label htmlFor="evidence_skill">Linked skill ID (optional)</label>
+            <input
+              id="evidence_skill"
+              type="text"
+              placeholder="Paste a skill UUID (optional)"
+              value={skillId}
+              onChange={(e) => setSkillId(e.target.value)}
+              disabled={uploading}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--border-color, rgba(0,0,0,0.12))",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
             <label htmlFor="evidence_desc">Description (optional)</label>
             <textarea
               id="evidence_desc"
@@ -214,9 +251,10 @@ export function Evidence(): JSX.Element {
           ) : (
             <div role="table" aria-label="Evidence list" style={{ width: "100%", overflowX: "auto" }}>
               <div role="rowgroup">
-                <div role="row" style={{ display: "grid", gridTemplateColumns: "1fr 160px 140px 80px", fontWeight: 600, padding: "8px 6px", borderBottom: "1px solid var(--border-color)" }}>
+                <div role="row" style={{ display: "grid", gridTemplateColumns: "1fr 160px 160px 100px 80px", fontWeight: 600, padding: "8px 6px", borderBottom: "1px solid var(--border-color)" }}>
                   <div role="columnheader">Title & Description</div>
                   <div role="columnheader">Competency</div>
+                  <div role="columnheader">Skill</div>
                   <div role="columnheader">Artifact</div>
                   <div role="columnheader" style={{ textAlign: "right" }}>Actions</div>
                 </div>
@@ -227,13 +265,16 @@ export function Evidence(): JSX.Element {
                   const link = it.signed_url || "#";
                   const hasFile = !!it.storage_path;
                   return (
-                    <div key={it.id} role="row" style={{ display: "grid", gridTemplateColumns: "1fr 160px 140px 80px", padding: "10px 6px", borderBottom: "1px solid var(--border-color)" }}>
+                    <div key={it.id} role="row" style={{ display: "grid", gridTemplateColumns: "1fr 160px 160px 100px 80px", padding: "10px 6px", borderBottom: "1px solid var(--border-color)" }}>
                       <div role="cell">
                         <div style={{ fontWeight: 500 }}>{it.title}</div>
                         {it.description && <div style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>{it.description}</div>}
                       </div>
                       <div role="cell" style={{ display: "flex", alignItems: "center" }}>
                         <span style={{ fontSize: 12 }}>{compName}</span>
+                      </div>
+                      <div role="cell" style={{ display: "flex", alignItems: "center" }}>
+                        <span style={{ fontSize: 12 }}>{it.skill_id || "—"}</span>
                       </div>
                       <div role="cell" style={{ display: "flex", alignItems: "center" }}>
                         {hasFile ? (

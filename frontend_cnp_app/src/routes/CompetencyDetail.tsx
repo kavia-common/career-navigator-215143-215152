@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+
 import {
   listCompetencies,
   listSkillsByCompetency,
@@ -37,7 +37,7 @@ export function CompetencyDetail(): JSX.Element {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [readiness, setReadiness] = useState<number | null>(null);
 
-  const autoBumpThresholdPct = 80; // Configurable threshold for competency bump consideration (UI only, no-op)
+  let autoBumpThresholdPct = 80; // default
   const checkboxLabel = (s: Skill) => `Mark "${s.name}" as complete`;
 
   // Load competency, skills, user progress, and profile for target role
@@ -50,6 +50,20 @@ export function CompetencyDetail(): JSX.Element {
 
         // profile for target role code
         const profRes = await getCurrentUserProfile();
+
+        // try get config
+        try {
+          const conf = await import("../lib/api");
+          const cfg = await conf.getConfig?.("skill_promotion_threshold");
+          if (cfg && !cfg.error && cfg.data) {
+            const n = Number(cfg.data);
+            if (!Number.isNaN(n)) {
+              autoBumpThresholdPct = n;
+            }
+          }
+        } catch {
+          // ignore config errors
+        }
         if (!active) return;
         if (!profRes.error && profRes.data) setProfile(profRes.data);
 
@@ -174,8 +188,22 @@ export function CompetencyDetail(): JSX.Element {
                 </div>
               ) : (
                 skills.map((s) => {
-                  // Optional: resource_link field if present in Skill; fallback to none
-                  const anyLink = (s as any).resource_link as string | undefined;
+                  // Handle legacy single link and new resource_links jsonb
+                  const legacyLink = (s as any).resource_link as string | undefined;
+                  const linksJson = (s as any).resource_links as any | undefined;
+                  const links: Array<{ label: string; url: string }> = [];
+                  if (legacyLink) links.push({ label: "Resource", url: legacyLink });
+                  if (linksJson && Array.isArray(linksJson)) {
+                    for (const it of linksJson) {
+                      if (it && typeof it === "object" && it.url) {
+                        links.push({ label: it.label || "Link", url: String(it.url) });
+                      }
+                    }
+                  } else if (linksJson && typeof linksJson === "object") {
+                    for (const [k, v] of Object.entries(linksJson)) {
+                      if (typeof v === "string") links.push({ label: k, url: v });
+                    }
+                  }
                   const completed = Number(progressMap[s.id] ?? 0) >= 100;
                   return (
                     <div key={s.id} role="row" style={{ display: "grid", gridTemplateColumns: "1fr 180px 120px", padding: "10px 6px", borderBottom: "1px solid var(--border-color)" }}>
@@ -183,9 +211,11 @@ export function CompetencyDetail(): JSX.Element {
                         <div style={{ fontWeight: 500 }}>{s.name}</div>
                         {s.description && <div style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>{s.description}</div>}
                       </div>
-                      <div role="cell" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {anyLink ? (
-                          <a className="navlink" href={anyLink} target="_blank" rel="noreferrer">Open resource</a>
+                      <div role="cell" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        {links.length > 0 ? (
+                          links.map((lk, idx) => (
+                            <a key={idx} className="navlink" href={lk.url} target="_blank" rel="noreferrer">{lk.label}</a>
+                          ))
                         ) : (
                           <span style={{ fontSize: 12, color: "var(--ocean-secondary)" }}>—</span>
                         )}
