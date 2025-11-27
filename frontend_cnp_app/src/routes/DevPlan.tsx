@@ -453,17 +453,17 @@ export function DevPlan(): JSX.Element {
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <input
                       aria-label="Title"
-                      value={it.title}
-                      onChange={(e) => onFieldChange(it.id, { title: e.target.value })}
+                      value={it.title || ""}
+                      onChange={(e) => onFieldChange(String(it.id), { title: String(e.target.value) })}
                       style={{ flex: 1, padding: 6 }}
                     />
-                    <button className="theme-toggle" onClick={() => handleDelete(it.id)}>✕</button>
+                    <button className="theme-toggle" onClick={() => handleDelete(String(it.id))}>✕</button>
                   </div>
                   <div>
                     <textarea
                       aria-label="Description"
                       value={decodeMetaDescription(it.description).description || ""}
-                      onChange={(e) => onFieldChange(it.id, { description: encodeMetaDescription(e.target.value, { phase: it.phase, priority: it.priority, status: it.status }) })}
+                      onChange={(e) => onFieldChange(String(it.id), { description: encodeMetaDescription(e.target.value, { phase: it.phase, priority: it.priority, status: it.status }) })}
                       rows={3}
                       style={{ width: "100%", marginTop: 6 }}
                     />
@@ -474,7 +474,7 @@ export function DevPlan(): JSX.Element {
                       <input
                         type="date"
                         value={(it.due_date || "").split("T")[0] || ""}
-                        onChange={(e) => onFieldChange(it.id, { due_date: e.target.value })}
+                        onChange={(e) => onFieldChange(String(it.id), { due_date: e.target.value })}
                         style={{ width: "100%" }}
                       />
                     </label>

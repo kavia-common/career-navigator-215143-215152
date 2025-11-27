@@ -83,7 +83,7 @@ export default function Dashboard(): JSX.Element {
       setTargetRoleCode(trg);
 
       const ev = await listEvidence();
-      if (!ev.error) setEvidence(ev.data);
+      if (!ev.error) setEvidence(ev.data || []);
 
       const kpi = await rpcRecomputeProfile(uid, trg || undefined);
       if (!kpi.error && kpi.data) {

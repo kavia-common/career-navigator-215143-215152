@@ -433,8 +433,9 @@ function fmtLevel(n?: number | null) {
   }
 }
 
-function competencyNameForId(id: string, comps: RoleCompetency[]) {
-  return comps.find(c => c.competency_id === id)?.competency_name;
+function competencyNameForId(id: string, _comps: RoleCompetency[]) {
+  // RoleCompetency does not include a name in our types; return the ID as a fallback label.
+  return id || "";
 }
 
 const StatusPill: React.FC<{ status: 'green' | 'amber' | 'red' }> = ({ status }) => {
