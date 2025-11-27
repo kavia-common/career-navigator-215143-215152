@@ -10,3 +10,5 @@ export { Admin } from './Admin';
 export { Login } from './Login';
 export { Sponsors } from './Sponsors';
 export { Notifications } from './Notifications';
+export { Explore } from './Explore';
+export { ExploreGap } from './ExploreGap';

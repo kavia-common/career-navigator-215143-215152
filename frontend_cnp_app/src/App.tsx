@@ -13,6 +13,8 @@ import {
   Home,
   Login,
   CompetencyDetail,
+  Explore,
+  ExploreGap,
 } from "./routes";
 import { Sponsors, Notifications } from "./routes";
 import { supabase, getSupabaseEnv } from "./lib/supabaseClient";
@@ -457,6 +459,9 @@ export default function App(): JSX.Element {
           ) : null}
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          {/* Public Explore routes */}
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/explore/:source/gaps/:target" element={<ExploreGap />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

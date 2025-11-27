@@ -63,6 +63,11 @@ export function Evidence(): JSX.Element {
       return;
     }
 
+    // 10MB client-side guard
+    if (file && file.size > 10 * 1024 * 1024) {
+      setError("File is too large. Please upload a file 10MB or smaller.");
+      return;
+    }
     setUploading(true);
     try {
       // Require user id

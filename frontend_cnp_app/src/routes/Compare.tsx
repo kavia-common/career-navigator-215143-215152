@@ -382,7 +382,18 @@ function difficultyScore(d?: string | null) {
 
 function fmtLevel(n?: number | null) {
   const v = typeof n === 'number' ? n : 0;
-  return v;
+  switch (v) {
+    case 0:
+      return 'F';
+    case 1:
+      return 'P';
+    case 2:
+      return 'A';
+    case 3:
+      return 'Au';
+    default:
+      return String(v);
+  }
 }
 
 function competencyNameForId(id: string, comps: RoleCompetency[]) {
