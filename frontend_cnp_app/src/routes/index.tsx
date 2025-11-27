@@ -8,3 +8,5 @@ export { CompetencyDetail } from './CompetencyDetail';
 export { Evidence } from './Evidence';
 export { Admin } from './Admin';
 export { Login } from './Login';
+export { Sponsors } from './Sponsors';
+export { Notifications } from './Notifications';

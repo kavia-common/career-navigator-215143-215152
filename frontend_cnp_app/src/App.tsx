@@ -14,6 +14,7 @@ import {
   Login,
   CompetencyDetail,
 } from "./routes";
+import { Sponsors, Notifications } from "./routes";
 import { supabase } from "./lib/supabaseClient";
 
 /**
@@ -139,17 +140,25 @@ export default function App(): JSX.Element {
       setSession({ userId: u?.id ?? null, email: u?.email ?? null });
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, s) => {
       const u = s?.user;
       setSession({ userId: u?.id ?? null, email: u?.email ?? null });
 
       if (event === "PASSWORD_RECOVERY") {
-        // Route to Login in recover mode
         window.history.pushState({}, "", "/login?mode=recover");
       }
-      // Additional events are handled naturally by route guards and header rendering
-      // SIGNED_IN -> session set above
-      // SIGNED_OUT -> session cleared above (u undefined)
+
+      // On sign-in or token refresh, ensure profile row exists
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        try {
+          const { ensureCurrentUserProfile } = await import("./lib/api");
+          await ensureCurrentUserProfile();
+          // Optional: warm read of profile
+          await supabase.from("profiles").select("id").limit(1);
+        } catch {
+          // ignore
+        }
+      }
     });
 
     return () => {
@@ -169,6 +178,8 @@ export default function App(): JSX.Element {
     { to: "/compare", label: "Compare" },
     { to: "/evidence", label: "Evidence" },
     { to: "/devplan", label: "Dev Plan" },
+    { to: "/sponsors", label: "Sponsors" },
+    { to: "/notifications", label: "Notifications" },
     { to: "/profile", label: "Profile" },
     { to: "/admin", label: "Admin" },
   ];
@@ -271,6 +282,8 @@ export default function App(): JSX.Element {
           <Route path="/devplan" element={<AuthGuard element={<DevPlan />} requireAuth />} />
           <Route path="/profile" element={<AuthGuard element={<Profile />} requireAuth />} />
           <Route path="/competency" element={<AuthGuard element={<CompetencyDetail />} requireAuth />} />
+          <Route path="/sponsors" element={<AuthGuard element={<Sponsors />} requireAuth />} />
+          <Route path="/notifications" element={<AuthGuard element={<Notifications />} requireAuth />} />
           <Route path="/admin" element={<AuthGuard element={<Admin />} requireAuth adminOnly />} />
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />

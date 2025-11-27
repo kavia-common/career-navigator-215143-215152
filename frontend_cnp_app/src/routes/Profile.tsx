@@ -73,7 +73,7 @@ export function Profile(): JSX.Element {
         const pid = profRes.data?.id || (await supabase.auth.getUser()).data.user?.id || "";
         const trg = profRes.data?.role_target_code || "";
         if (pid && trg) {
-          const gap = await rpcGapAnalysis(pid, trg);
+          const gap = await rpcGapAnalysis(pid, trg, { useCache: true });
           if (!gap.error && gap.data) {
             setReadiness(gap.data.readiness);
             setOverlap((gap.data as any).overlap ?? gap.data.overlapRatio ?? null);

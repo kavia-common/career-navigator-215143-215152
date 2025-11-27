@@ -91,7 +91,7 @@ export default function Dashboard(): JSX.Element {
       }
 
       if (uid && trg) {
-        const gap = await rpcGapAnalysis(uid, trg);
+        const gap = await rpcGapAnalysis(uid, trg, { useCache: true });
         if (!gap.error) {
           const d = gap.data || {};
           const b = Array.isArray(d.breakdown) ? d.breakdown : [];
@@ -132,7 +132,7 @@ export default function Dashboard(): JSX.Element {
       }
 
       if (targetRoleCode) {
-        const gap = await rpcGapAnalysis(profileId, targetRoleCode);
+        const gap = await rpcGapAnalysis(profileId, targetRoleCode, { useCache: true });
         if (!gap.error) {
           const d = gap.data || {};
           const b = Array.isArray(d.breakdown) ? d.breakdown : [];

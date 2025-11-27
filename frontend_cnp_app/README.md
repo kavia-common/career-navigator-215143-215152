@@ -3,6 +3,7 @@
 This project provides a minimal React template with a clean, modern UI and minimal dependencies.
 
 ## Features
+- Sponsors and Notifications pages added to the left navigation. These allow managing your own sponsors and notifications (RLS enforced).
 
 - **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
 - **Modern UI**: Clean, responsive design with KAVIA brand styling

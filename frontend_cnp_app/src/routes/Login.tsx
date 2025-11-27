@@ -48,7 +48,17 @@ export function Login(): JSX.Element {
         return;
       }
       if (session?.user) {
-        navigate("/", { replace: true });
+        // Post-login provisioning: ensure profile exists then navigate
+        (async () => {
+          try {
+            const { ensureCurrentUserProfile } = await import("../lib/api");
+            await ensureCurrentUserProfile();
+          } catch {
+            // ignore
+          } finally {
+            navigate("/", { replace: true });
+          }
+        })();
       }
     });
 

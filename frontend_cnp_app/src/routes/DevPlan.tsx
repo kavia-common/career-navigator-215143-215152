@@ -138,7 +138,7 @@ export function DevPlan(): JSX.Element {
 
         // Load gap analysis if target role present
         if (prof.role_target_code) {
-          const gapRes = await rpcGapAnalysis(prof.id, prof.role_target_code);
+          const gapRes = await rpcGapAnalysis(prof.id, prof.role_target_code, { useCache: true });
           if (!gapRes.error && gapRes.data) {
             setGap(gapRes.data);
           }
