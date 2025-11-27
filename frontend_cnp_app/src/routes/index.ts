@@ -1,10 +1,10 @@
-export { default as Home } from './Home';
+export { Home } from './Home';
 export { default as Dashboard } from './Dashboard';
-export { default as Graph } from './Graph';
-export { default as Profile } from './Profile';
+export { Graph } from './Graph';
+export { Profile } from './Profile';
 export { default as Compare } from './Compare';
-export { default as DevPlan } from './DevPlan';
-export { default as CompetencyDetail } from './CompetencyDetail';
-export { default as Evidence } from './Evidence';
-export { default as Admin } from './Admin';
-export { default as Login } from './Login';
+export { DevPlan } from './DevPlan';
+export { CompetencyDetail } from './CompetencyDetail';
+export { Evidence } from './Evidence';
+export { Admin } from './Admin';
+export { Login } from './Login';
