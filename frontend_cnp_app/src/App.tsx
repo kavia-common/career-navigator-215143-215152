@@ -12,8 +12,8 @@ import {
   Admin,
   Home,
   Login,
+  CompetencyDetail,
 } from "./routes";
-import { CompetencyDetail } from "./routes";
 import { supabase } from "./lib/supabaseClient";
 
 /**

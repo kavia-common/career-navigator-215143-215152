@@ -1,102 +1,97 @@
-/* Merge minimal defaults with Ocean Professional theme tokens (see styles/theme.css) */
-:root {
-  --bg-primary: var(--ocean-bg, #ffffff);
-  --bg-secondary: var(--ocean-surface, #f8f9fa);
-  --text-primary: var(--ocean-text, #111827);
-  --text-secondary: var(--ocean-secondary, #9CA3AF);
-  --border-color: rgba(0,0,0,0.06);
-  --button-bg: var(--ocean-primary, #374151);
-  --button-text: #ffffff;
-}
-
-[data-theme="dark"] {
-  /* tokens resolved from theme.css */
-}
-
-.App {
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-1, 0 1px 2px rgba(0,0,0,0.06), 0 1px 1px rgba(0,0,0,0.04));
-}
-
-.navbar__left,
-.navbar__center,
-.navbar__right {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.brand {
+.app-title {
+  color: #111827;
+  font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
-  text-decoration: none;
-  letter-spacing: 0.2px;
 }
 
-.navlink {
-  color: var(--text-primary);
-  opacity: 0.75;
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  display: inline-block;
-}
-
-.navlink.active {
-  opacity: 1;
-  background: rgba(0,0,0,0.06);
-}
-
-.container {
-  max-width: 1100px;
-  margin: 24px auto;
-  padding: 0 16px;
-}
-
-.title {
-  margin: 0 0 8px 0;
-  font-size: 28px;
-}
-
-.description {
-  margin: 0 0 16px 0;
-  color: var(--text-primary);
-  opacity: 0.8;
-}
-
-.theme-toggle {
-  background-color: var(--button-bg);
-  color: var(--button-text);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
+.app-subtitle {
   font-size: 14px;
+}
+
+.app-label {
+  display: block;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.app-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #111827;
+  outline: none;
+}
+
+.app-input:focus {
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2);
+}
+
+.app-surface {
+  background: #F9FAFB;
+  min-height: 100%;
+}
+
+.app-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.app-section-title {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.app-error {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.app-table th, .app-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.app-table thead th {
+  font-size: 12px;
+  color: #6b7280;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.theme-toggle:hover {
-  transform: translateY(-1px);
-  opacity: 0.95;
+.app-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.footer {
-  border-top: 1px solid var(--border-color);
-  margin-top: 24px;
-  padding: 16px 20px;
-  color: var(--text-primary);
-  opacity: 0.7;
+.app-list-item {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.app-link {
+  color: #374151;
+  text-decoration: underline;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
 }
