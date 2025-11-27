@@ -13,6 +13,7 @@ import {
   Home,
   Login,
 } from "./routes";
+import { CompetencyDetail } from "./routes";
 import { supabase } from "./lib/supabaseClient";
 
 /**
@@ -261,6 +262,7 @@ export default function App(): JSX.Element {
           <Route path="/evidence" element={<AuthGuard element={<Evidence />} requireAuth />} />
           <Route path="/devplan" element={<AuthGuard element={<DevPlan />} requireAuth />} />
           <Route path="/profile" element={<AuthGuard element={<Profile />} requireAuth />} />
+          <Route path="/competency" element={<AuthGuard element={<CompetencyDetail />} requireAuth />} />
           <Route path="/admin" element={<AuthGuard element={<Admin />} requireAuth adminOnly />} />
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />
