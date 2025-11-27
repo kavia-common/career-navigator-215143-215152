@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { exportProfilePdf, getCurrentUserProfile, listEvidence, rpcGapAnalysis, rpcRecomputeProfile } from "../lib/api";
+import { exportProfilePdf, listEvidence, rpcGapAnalysis, rpcRecomputeProfile } from "../lib/api";
 import "../styles/theme.css";
 
 /**
@@ -70,13 +70,16 @@ export default function Dashboard(): JSX.Element {
       }
       setProfileId(uid);
 
-      const prof = await getCurrentUserProfile();
-      if (prof.error) {
-        setError(prof.error);
-        setLoading(false);
-        return;
+      // Read profile target role directly
+      let trg: string | null = null;
+      try {
+        const row = await supabase.from("profiles").select("role_target_code").eq("id", uid).maybeSingle();
+        if (!row.error && row.data) {
+          trg = (row.data as any).role_target_code || null;
+        }
+      } catch {
+        // ignore
       }
-      const trg = prof.data?.role_target_code || null;
       setTargetRoleCode(trg);
 
       const ev = await listEvidence();

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
-import { getCurrentUserProfile } from "../lib/api";
+import { ensureCurrentUserProfile } from "../lib/api";
 import "../styles/theme.css";
 
 /**
@@ -33,10 +33,12 @@ export function Home(): JSX.Element {
       .attr("fill", "var(--color-primary)")
       .attr("rx", 4);
 
-    getCurrentUserProfile().then((res) => {
+    ensureCurrentUserProfile().then(() => {
       // eslint-disable-next-line no-console
-      if (res.error) console.debug("Profile not available (if not logged in):", res.error);
-      else console.debug("Profile:", res.data);
+      console.debug("Ensured profile exists (if authenticated).");
+    }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.debug("Profile ensure skipped/failed (likely unauthenticated):", e?.message || e);
     });
   }, []);
 

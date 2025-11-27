@@ -28,6 +28,37 @@ Launches the test runner in interactive watch mode.
 Builds the app for production to the `build` folder.\
 It correctly bundles React in production mode and optimizes the build for the best performance.
 
+## Environment Variables (Supabase)
+
+The app reads Supabase credentials from:
+- REACT_APP_SUPABASE_URL
+- REACT_APP_SUPABASE_KEY
+
+For convenience, if only SUPABASE_URL and SUPABASE_KEY exist in the environment, the app will fall back to those. Create React App only exposes variables prefixed with REACT_APP_ at build time, so prefer the REACT_ variants whenever possible.
+
+Minimal .env example:
+```
+REACT_APP_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+REACT_APP_SUPABASE_KEY=YOUR_ANON_PUBLIC_KEY
+```
+
+If either variable is missing, the app will show a small warning in the header and log a descriptive message to the console.
+
+## Health Check
+
+A lightweight Supabase connectivity health page is available at:
+- /health/supabase
+
+It attempts:
+- supabase.auth.getSession()
+- select id from profiles limit 1
+
+It displays:
+- Connected (green) on success
+- Error (red) with a brief message otherwise (details in the browser console)
+
+Note: In production (NODE_ENV=production), the component renders null by default to remain unobtrusive, but the route remains available in development.
+
 ## Customization
 
 ### Colors

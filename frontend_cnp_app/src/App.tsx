@@ -18,6 +18,7 @@ import {
 } from "./routes";
 import { Sponsors, Notifications } from "./routes";
 import { supabase, getSupabaseEnv } from "./lib/supabaseClient";
+import SupabaseHealth from "./health/SupabaseHealth";
 
 /**
  * Ocean Professional layout:
@@ -462,6 +463,8 @@ export default function App(): JSX.Element {
           {/* Public Explore routes */}
           <Route path="/explore" element={<Explore />} />
           <Route path="/explore/:source/gaps/:target" element={<ExploreGap />} />
+          {/* Health checks */}
+          <Route path="/health/supabase" element={<SupabaseHealth />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

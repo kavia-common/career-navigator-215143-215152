@@ -7,7 +7,6 @@ import {
   listProfileSkillProgress,
   updateSkillProgressAndRecompute,
   rpcGapAnalysis,
-  getCurrentUserProfile,
 } from "../lib/api";
 import type { Skill, ProfileSkillProgress, UUID, UserProfile, Competency } from "../lib/types";
 
@@ -49,7 +48,21 @@ export function CompetencyDetail(): JSX.Element {
         setError(null);
 
         // profile for target role code
-        const profRes = await getCurrentUserProfile();
+        let profRes: { data?: UserProfile | null; error?: string } = { data: null };
+        try {
+          const { data: auth } = await (await import("../lib/supabaseClient")).supabase.auth.getUser();
+          const uid = auth.user?.id || "";
+          if (uid) {
+            const row = await (await import("../lib/supabaseClient")).supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
+            if (!row.error && row.data) {
+              profRes.data = row.data as unknown as UserProfile;
+            } else {
+              profRes.data = null;
+            }
+          }
+        } catch {
+          profRes.data = null;
+        }
 
         // try get config
         try {

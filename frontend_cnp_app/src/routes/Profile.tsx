@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { getCurrentUserProfile, listRoles, rpcGapAnalysis, rpcRecomputeProfile, upsertCurrentUserProfile } from "../lib/api";
+import { ensureCurrentUserProfile, listRoles, rpcGapAnalysis, rpcRecomputeProfile, upsertCurrentUserProfile } from "../lib/api";
 import type { Role, UserProfile } from "../lib/types";
 
 // PUBLIC_INTERFACE
@@ -40,17 +40,25 @@ export function Profile(): JSX.Element {
       setLoading(true);
       setError(null);
       try {
-        const [profRes, rolesRes] = await Promise.all([getCurrentUserProfile(), listRoles()]);
+        const [_, rolesRes] = await Promise.all([ensureCurrentUserProfile(), listRoles()]);
         if (!active) return;
         if (rolesRes.error) throw new Error(rolesRes.error);
         setRoles(rolesRes.data || []);
 
-        if (profRes.error) {
-          // Profile might not exist yet; initialize from auth user
-          const { data: auth } = await supabase.auth.getUser();
-          const email = auth.user?.email || "";
+        // Read profile directly (best-effort)
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth.user?.id || "";
+        const email = auth.user?.email || "";
+        let p: UserProfile | null = null;
+        if (uid) {
+          const r = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
+          if (!r.error && r.data) {
+            p = r.data as unknown as UserProfile;
+          }
+        }
+        if (!p) {
           const skeleton: UserProfile = {
-            id: auth.user?.id || "",
+            id: uid,
             email,
             full_name: "",
             role_current_code: undefined,
@@ -62,7 +70,6 @@ export function Profile(): JSX.Element {
           setCurrentRole("");
           setTargetRole("");
         } else {
-          const p = profRes.data!;
           setProfile(p);
           setFullName(p.full_name || "");
           setCurrentRole(p.role_current_code || "");
@@ -70,8 +77,8 @@ export function Profile(): JSX.Element {
         }
 
         // If we have target role and profile id, fetch readiness via rpc_gap_analysis (best-effort)
-        const pid = profRes.data?.id || (await supabase.auth.getUser()).data.user?.id || "";
-        const trg = profRes.data?.role_target_code || "";
+        const pid = p?.id || uid || "";
+        const trg = p?.role_target_code || "";
         if (pid && trg) {
           const gap = await rpcGapAnalysis(pid, trg, { useCache: true });
           if (!gap.error && gap.data) {
