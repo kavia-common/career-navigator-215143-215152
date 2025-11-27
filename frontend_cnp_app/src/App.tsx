@@ -129,7 +129,7 @@ export default function App(): JSX.Element {
   const toggleTheme = (): void =>
     setTheme((t) => (t === "light" ? "dark" : "light"));
 
-  // Supabase session listener
+  // Supabase session listener with PASSWORD_RECOVERY handling
   useEffect(() => {
     let mounted = true;
 
@@ -139,9 +139,17 @@ export default function App(): JSX.Element {
       setSession({ userId: u?.id ?? null, email: u?.email ?? null });
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       const u = s?.user;
       setSession({ userId: u?.id ?? null, email: u?.email ?? null });
+
+      if (event === "PASSWORD_RECOVERY") {
+        // Route to Login in recover mode
+        window.history.pushState({}, "", "/login?mode=recover");
+      }
+      // Additional events are handled naturally by route guards and header rendering
+      // SIGNED_IN -> session set above
+      // SIGNED_OUT -> session cleared above (u undefined)
     });
 
     return () => {
