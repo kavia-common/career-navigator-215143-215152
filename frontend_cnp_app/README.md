@@ -18,7 +18,8 @@ In the project directory, you can run:
 
 Runs the app in development mode.
 - To bind on all interfaces for preview environments, use:
-  HOST=0.0.0.0 PORT=3000 npm start
+  HOST=0.0.0.0 PORT=3000 BROWSER=none npm start
+  (CRA respects HOST and PORT; BROWSER=none prevents auto-open.)
 - Default healthcheck path: GET /health/supabase (renders a small status panel in development)
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
