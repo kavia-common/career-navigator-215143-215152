@@ -1,3 +1,16 @@
-@import "./styles/graph.css";
+@import './styles/theme.css';
+@import './styles/graph.css';
 
-/* keep existing index.css content minimal or override by other styles if present */
+/* Minimal baseline; all tokens come from theme.css */
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+code {
+  font-family: var(--font-mono);
+}

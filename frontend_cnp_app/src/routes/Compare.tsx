@@ -96,7 +96,7 @@ const Compare: React.FC = () => {
             })
             .map(s => ({
               competency_id: s.competency_id,
-              name: s.competency_name ?? "",
+              name: (s.competency_name ?? "") as string,
               source_level: s.proficiency || 0,
               target_level: targetMap.get(s.competency_id)?.proficiency || 0,
             }));
@@ -109,7 +109,7 @@ const Compare: React.FC = () => {
               const delta = Math.max(0, tLevel - sLevel);
               return {
                 competency_id: t.competency_id,
-                name: t.competency_name,
+                name: (t.competency_name ?? "") as string,
                 source_level: sLevel,
                 target_level: tLevel,
                 delta,
@@ -155,7 +155,7 @@ const Compare: React.FC = () => {
     const run = async () => {
       try {
         setErr(prev => prev); // preserve any existing error
-        const deficitIds = gap!.deficits.map(d => d.competency_id);
+        const deficitIds = (gap && Array.isArray(gap.deficits) ? gap.deficits : []).map(d => d.competency_id);
         // Example schema:
         // learning_items table has columns: id, title, url, type, competency_id, difficulty, provider
         const { data, error } = await supabase
@@ -166,7 +166,9 @@ const Compare: React.FC = () => {
         if (error) throw error;
 
         // Rank items by deficit delta and some simple preferences (e.g., difficulty asc)
-        const deltaByComp = new Map(gap!.deficits.map(d => [d.competency_id, d.delta]));
+        const deltaByComp = new Map(
+          (gap && Array.isArray(gap.deficits) ? gap.deficits : []).map(d => [d.competency_id, d.delta] as const)
+        );
         const ranked = (data || [])
           .map((item) => ({
             ...item,
@@ -221,13 +223,14 @@ const Compare: React.FC = () => {
     // - Amber: delta 1
     // - Red: delta >= 2
     return rows
-      .map(r => ({
-        ...r,
-        status: r.source_level >= r.target_level ? 'green' : r.delta === 1 ? 'amber' : 'red',
-      }))
+      .map(r => {
+        const status: 'green' | 'amber' | 'red' =
+          r.source_level >= r.target_level ? 'green' : r.delta === 1 ? 'amber' : 'red';
+        return { ...r, status };
+      })
       .sort((a, b) => {
         // Sort by severity then by delta desc
-        const sev = (s: string) => (s === 'red' ? 2 : s === 'amber' ? 1 : 0);
+        const sev = (s: 'green' | 'amber' | 'red') => (s === 'red' ? 2 : s === 'amber' ? 1 : 0);
         const d = sev(b.status) - sev(a.status);
         if (d !== 0) return d;
         return b.delta - a.delta;

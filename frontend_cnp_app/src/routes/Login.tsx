@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import "../styles/theme.css";
 
 /**
- * Email magic link and optional password sign-in to exercise Supabase auth flow.
- * In production, consider OAuth providers and stronger UX.
+ * PUBLIC_INTERFACE
+ * Login route with magic link and password sign-in using Supabase; accessible and minimalist.
  */
-
-// PUBLIC_INTERFACE
 export function Login(): JSX.Element {
-  /** Public login route that supports magic link and password sign-in. */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -19,7 +17,6 @@ export function Login(): JSX.Element {
   const siteUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
 
   useEffect(() => {
-    // if already logged in, redirect to dashboard
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
@@ -41,9 +38,7 @@ export function Login(): JSX.Element {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: siteUrl, // honor environment
-        },
+        options: { emailRedirectTo: siteUrl },
       });
       if (error) {
         setStatus("error");
@@ -63,10 +58,7 @@ export function Login(): JSX.Element {
     setStatus("sending");
     setMessage("");
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setStatus("error");
         setMessage(error.message);
@@ -81,54 +73,63 @@ export function Login(): JSX.Element {
   };
 
   return (
-    <section>
-      <h1 className="title">Sign in</h1>
-      <p className="description">Use your email to receive a magic link or sign in with password.</p>
+    <section className="container" aria-labelledby="login-title">
+      <h1 id="login-title">Sign in</h1>
+      <p className="mb-4" style={{ color: "var(--color-secondary)" }}>
+        Use your email to receive a magic link or sign in with password.
+      </p>
 
-      <form onSubmit={onMagic} style={{ display: "grid", gap: 8, maxWidth: 360, marginBottom: 16 }}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          required
-          placeholder="you@example.com"
-          style={{
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border-color, rgba(0,0,0,0.12))",
-          }}
-        />
-        <button className="theme-toggle" type="submit" disabled={status === "sending"}>
-          {status === "sending" ? "Sending..." : "Send magic link"}
-        </button>
-      </form>
+      <div className="card" role="form" aria-describedby="login-help" style={{ maxWidth: 480 }}>
+        <p id="login-help" className="mb-4" style={{ color: "var(--color-secondary)" }}>
+          We’ll email you a sign-in link. Alternatively, sign in with your password.
+        </p>
 
-      <form onSubmit={onPassword} style={{ display: "grid", gap: 8, maxWidth: 360 }}>
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          placeholder="••••••••"
-          style={{
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border-color, rgba(0,0,0,0.12))",
-          }}
-        />
-        <button className="theme-toggle" type="submit" disabled={status === "sending"}>
-          {status === "sending" ? "Signing in..." : "Sign in with password"}
-        </button>
-      </form>
+        <form onSubmit={onMagic} className="stack" noValidate>
+          <label htmlFor="email" style={{ fontWeight: 600 }}>Email</label>
+          <input
+            id="email"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            required
+            placeholder="you@example.com"
+            aria-required="true"
+          />
+          <button className="btn btn-primary" type="submit" disabled={status === "sending"}>
+            {status === "sending" ? "Sending..." : "Send magic link"}
+          </button>
+        </form>
 
-      {message && (
-        <div role="status" aria-live="polite" style={{ marginTop: 10, color: status === "error" ? "var(--ocean-error)" : "var(--ocean-secondary)" }}>
-          {message}
-        </div>
-      )}
+        <hr className="mt-4 mb-4" style={{ border: 0, borderTop: "1px solid rgba(17,24,39,0.06)" }} />
+
+        <form onSubmit={onPassword} className="stack" noValidate>
+          <label htmlFor="password" style={{ fontWeight: 600 }}>Password</label>
+          <input
+            id="password"
+            className="input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            placeholder="••••••••"
+          />
+          <button className="btn btn-secondary" type="submit" disabled={status === "sending"}>
+            {status === "sending" ? "Signing in..." : "Sign in with password"}
+          </button>
+        </form>
+
+        {message && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={status === "error" ? "alert alert-error mt-4" : "alert alert-success mt-4"}
+          >
+            {message}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
+
+export default Login;

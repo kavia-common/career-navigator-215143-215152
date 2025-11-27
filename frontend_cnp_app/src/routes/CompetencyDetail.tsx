@@ -9,7 +9,7 @@ import {
   rpcGapAnalysis,
   getCurrentUserProfile,
 } from "../lib/api";
-import type { Competency, Skill, ProfileSkillProgress, UUID, UserProfile } from "../lib/types";
+import type { Skill, ProfileSkillProgress, UUID, UserProfile } from "../lib/types";
 
 // PUBLIC_INTERFACE
 export function CompetencyDetail(): JSX.Element {

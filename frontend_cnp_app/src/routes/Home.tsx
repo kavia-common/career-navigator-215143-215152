@@ -1,14 +1,16 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { getCurrentUserProfile } from "../lib/api";
+import "../styles/theme.css";
 
-// PUBLIC_INTERFACE
+/**
+ * PUBLIC_INTERFACE
+ * Home: minimalist welcome with tiny D3 spark and accessible labels.
+ */
 export function Home(): JSX.Element {
-  /** Minimal Home route; demonstrates D3 readiness and Supabase call path. */
   const ref = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
-    // Draw a tiny D3 bar for readiness signal
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
     const w = 220;
@@ -16,16 +18,10 @@ export function Home(): JSX.Element {
     svg.attr("viewBox", `0 0 ${w} ${h}`);
     const data = [10, 30, 18, 25, 12];
 
-    const x = d3
-      .scaleBand()
-      .domain(data.map((_, i) => i.toString()))
-      .range([10, w - 10])
-      .padding(0.2);
-
+    const x = d3.scaleBand().domain(data.map((_, i) => i.toString())).range([10, w - 10]).padding(0.2);
     const y = d3.scaleLinear().domain([0, d3.max(data) ?? 0]).range([h - 10, 10]);
 
-    svg
-      .append("g")
+    svg.append("g")
       .selectAll("rect")
       .data(data)
       .enter()
@@ -34,24 +30,27 @@ export function Home(): JSX.Element {
       .attr("y", (d) => y(d))
       .attr("width", x.bandwidth())
       .attr("height", (d) => h - 10 - y(d))
-      .attr("fill", "var(--ocean-primary)")
+      .attr("fill", "var(--color-primary)")
       .attr("rx", 4);
 
-    // Touch Supabase path (no auth required; safe to ignore errors)
     getCurrentUserProfile().then((res) => {
       // eslint-disable-next-line no-console
-      if (res.error) console.debug("Profile not available (expected if not logged in):", res.error);
+      if (res.error) console.debug("Profile not available (if not logged in):", res.error);
       else console.debug("Profile:", res.data);
     });
   }, []);
 
   return (
-    <section>
-      <h1 className="title">Welcome to Career Navigator</h1>
-      <p className="description">
-        Ocean Professional shell is ready. Sign in to access your dashboard and planning tools.
+    <section className="container" aria-labelledby="home-title">
+      <h1 id="home-title">Welcome to Career Navigator</h1>
+      <p className="mb-4" style={{ color: "var(--color-secondary)" }}>
+        Sign in to access your dashboard and planning tools.
       </p>
-      <svg ref={ref} role="img" aria-label="Readiness mini chart" />
+      <div className="card">
+        <svg ref={ref} role="img" aria-label="Readiness mini chart" />
+      </div>
     </section>
   );
 }
+
+export default Home;

@@ -2,15 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { exportProfilePdf, getCurrentUserProfile, listEvidence, rpcGapAnalysis, rpcRecomputeProfile } from "../lib/api";
+import "../styles/theme.css";
 
 /**
  * PUBLIC_INTERFACE
  * Dashboard: Auth-required landing showing KPIs, top competency gaps, recent evidence, and quick actions.
- * - Fetches readiness via rpc_gap_analysis (Edge Function)
- * - Refresh KPIs via rpc_recompute_profile
- * - Shows color-coded gaps table (Green/Amber/Red based on attainment)
- * - Lists recent evidence items
- * - Provides quick actions: Update Profile, Add Evidence, Generate Plan, Export PDF
+ * Accessible states with Ocean Professional theme tokens.
  */
 export default function Dashboard(): JSX.Element {
   const navigate = useNavigate();
@@ -37,7 +34,6 @@ export default function Dashboard(): JSX.Element {
   const [kpiCounts, setKpiCounts] = useState<{ competencies?: number; evidence?: number; plan_items?: number; completed_items?: number } | null>(null);
 
   const deriveTraffic = (level: number, target: number): "Green" | "Amber" | "Red" => {
-    // Normalize to Ocean Professional G/A/R thresholds by attainment vs target
     const T = Number(target || 0);
     const L = Number(level || 0);
     if (T <= 0) return "Green";
@@ -65,7 +61,6 @@ export default function Dashboard(): JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      // Auth
       const { data: authRes } = await supabase.auth.getUser();
       const uid = authRes.user?.id || null;
       if (!uid) {
@@ -75,7 +70,6 @@ export default function Dashboard(): JSX.Element {
       }
       setProfileId(uid);
 
-      // Profile/target
       const prof = await getCurrentUserProfile();
       if (prof.error) {
         setError(prof.error);
@@ -85,11 +79,9 @@ export default function Dashboard(): JSX.Element {
       const trg = prof.data?.role_target_code || null;
       setTargetRoleCode(trg);
 
-      // Evidence list (non-blocking error)
       const ev = await listEvidence();
       if (!ev.error) setEvidence(ev.data);
 
-      // Recompute KPIs first to refresh readiness/overlap server-side
       const kpi = await rpcRecomputeProfile(uid, trg || undefined);
       if (!kpi.error && kpi.data) {
         setKpiCounts(kpi.data.counts || null);
@@ -97,7 +89,6 @@ export default function Dashboard(): JSX.Element {
         if (typeof kpi.data.overlap === "number") setOverlap(kpi.data.overlap);
       }
 
-      // Gap analysis for table (after recompute to reflect latest)
       if (uid && trg) {
         const gap = await rpcGapAnalysis(uid, trg);
         if (!gap.error) {
@@ -128,7 +119,6 @@ export default function Dashboard(): JSX.Element {
     setRefreshing(true);
     setError(null);
     try {
-      // recompute
       const res = await rpcRecomputeProfile(profileId, targetRoleCode || undefined);
       if (res.error) {
         setError(res.error);
@@ -139,7 +129,6 @@ export default function Dashboard(): JSX.Element {
         if (typeof k?.overlap === "number") setOverlap(k.overlap);
       }
 
-      // refresh gaps
       if (targetRoleCode) {
         const gap = await rpcGapAnalysis(profileId, targetRoleCode);
         if (!gap.error) {
@@ -230,16 +219,9 @@ export default function Dashboard(): JSX.Element {
             <button
               onClick={onRefreshKpis}
               disabled={refreshing}
-              style={{
-                padding: "10px 14px",
-                background: "var(--color-primary)",
-                color: "white",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                height: 44,
-                minWidth: 140
-              }}>
+              className="btn btn-primary"
+              style={{ height: 44, minWidth: 140 }}
+            >
               {refreshing ? "Refreshing…" : "Refresh KPIs"}
             </button>
           </div>
@@ -250,24 +232,24 @@ export default function Dashboard(): JSX.Element {
               <div style={{ color: "#6B7280" }}>No gaps found. Great job!</div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+                <table className="table">
                   <thead>
                     <tr>
-                      <th style={thStyle}>Competency</th>
-                      <th style={thStyle}>Current</th>
-                      <th style={thStyle}>Target</th>
-                      <th style={thStyle}>Delta</th>
-                      <th style={thStyle}>Status</th>
+                      <th>Competency</th>
+                      <th>Current</th>
+                      <th>Target</th>
+                      <th>Delta</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {topGaps.map((g) => (
-                      <tr key={g.competency_id} style={{ background: "#fff" }}>
-                        <td style={tdStyle}>{g.competency_name || g.competency_id}</td>
-                        <td style={tdStyle}>{g.profile_level}</td>
-                        <td style={tdStyle}>{g.role_target}</td>
-                        <td style={tdStyle}>{g.delta}</td>
-                        <td style={tdStyle}>
+                      <tr key={g.competency_id}>
+                        <td>{g.competency_name || g.competency_id}</td>
+                        <td>{g.profile_level}</td>
+                        <td>{g.role_target}</td>
+                        <td>{g.delta}</td>
+                        <td>
                           {trafficDot(g.traffic)}
                           <span>{g.traffic}</span>
                         </td>
@@ -286,7 +268,7 @@ export default function Dashboard(): JSX.Element {
             ) : (
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 }}>
                 {evidence.slice(0, 5).map((e) => (
-                  <li key={e.id} style={{ border: "1px solid #E5E7EB", borderRadius: 8, padding: 12, background: "#fff" }}>
+                  <li key={e.id} className="card">
                     <div style={{ fontWeight: 600, color: "var(--color-text)" }}>{e.title || "Untitled"}</div>
                     {e.description ? <div style={{ color: "#6B7280", marginTop: 4 }}>{e.description}</div> : null}
                     <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>
@@ -308,10 +290,10 @@ export default function Dashboard(): JSX.Element {
           <div style={{ marginTop: 8 }}>
             <h2 style={{ fontSize: 18, color: "var(--color-text)", marginBottom: 8 }}>Quick Actions</h2>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button style={btnSecondary} onClick={() => navigate("/profile")}>Update Profile</button>
-              <button style={btnSecondary} onClick={() => navigate("/evidence")}>Add Evidence</button>
-              <button style={btnSecondary} onClick={() => navigate("/devplan")}>Generate Plan</button>
-              <button style={btnSecondary} onClick={onExportPdf}>Export PDF</button>
+              <button className="btn btn-secondary" onClick={() => navigate("/profile")}>Update Profile</button>
+              <button className="btn btn-secondary" onClick={() => navigate("/evidence")}>Add Evidence</button>
+              <button className="btn btn-secondary" onClick={() => navigate("/devplan")}>Generate Plan</button>
+              <button className="btn btn-secondary" onClick={onExportPdf}>Export PDF</button>
             </div>
           </div>
         </>
@@ -319,28 +301,3 @@ export default function Dashboard(): JSX.Element {
     </section>
   );
 }
-
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  color: "#6B7280",
-  fontWeight: 500,
-  padding: "10px 12px",
-  borderBottom: "1px solid #E5E7EB",
-  background: "var(--color-surface)",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderBottom: "1px solid #F3F4F6",
-  color: "var(--color-text)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  padding: "10px 14px",
-  background: "var(--color-surface)",
-  border: "1px solid #E5E7EB",
-  color: "var(--color-text)",
-  borderRadius: 10,
-  cursor: "pointer",
-  minWidth: 150,
-};
