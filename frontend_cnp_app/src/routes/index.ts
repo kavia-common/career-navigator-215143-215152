@@ -1,1 +1,17 @@
-export { Home } from "./Home";
+export * from "./Home";
+export * from "./Dashboard";
+export * from "./Graph";
+export * from "./Compare";
+export * from "./Profile";
+export * from "./Evidence";
+export * from "./DevPlan";
+export * from "./Admin";
+export * from "./Login";
+export { Dashboard } from "./Dashboard";
+export { Graph } from "./Graph";
+export { Compare } from "./Compare";
+export { Profile } from "./Profile";
+export { Evidence } from "./Evidence";
+export { DevPlan } from "./DevPlan";
+export { Admin } from "./Admin";
+export { Login } from "./Login";

@@ -49,7 +49,7 @@ export function Home(): JSX.Element {
     <section>
       <h1 className="title">Welcome to Career Navigator</h1>
       <p className="description">
-        A minimalist starting point. TypeScript, Supabase, D3, routing, XLSX, and PDF are installed.
+        Ocean Professional shell is ready. Sign in to access your dashboard and planning tools.
       </p>
       <svg ref={ref} role="img" aria-label="Readiness mini chart" />
     </section>

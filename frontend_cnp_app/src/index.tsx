@@ -10,7 +10,6 @@ function bootstrap(): void {
   /** Bootstraps the React application and wires up the router. */
   const rootElement = document.getElementById("root");
   if (!rootElement) {
-    // Fail loudly in development; guard in production
     // eslint-disable-next-line no-console
     console.error("Root element #root not found.");
     return;

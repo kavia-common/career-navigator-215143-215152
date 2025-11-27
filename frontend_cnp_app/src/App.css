@@ -1,22 +1,16 @@
-/* Keep existing theming but align class names to new layout */
+/* Merge minimal defaults with Ocean Professional theme tokens (see styles/theme.css) */
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --text-primary: #282c34;
-  --text-secondary: #61dafb;
-  --border-color: #e9ecef;
-  --button-bg: #007bff;
+  --bg-primary: var(--ocean-bg, #ffffff);
+  --bg-secondary: var(--ocean-surface, #f8f9fa);
+  --text-primary: var(--ocean-text, #111827);
+  --text-secondary: var(--ocean-secondary, #9CA3AF);
+  --border-color: rgba(0,0,0,0.06);
+  --button-bg: var(--ocean-primary, #374151);
   --button-text: #ffffff;
 }
 
 [data-theme="dark"] {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #282c34;
-  --text-primary: #ffffff;
-  --text-secondary: #61dafb;
-  --border-color: #404040;
-  --button-bg: #0056b3;
-  --button-text: #ffffff;
+  /* tokens resolved from theme.css */
 }
 
 .App {
@@ -33,6 +27,7 @@
   padding: 12px 20px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0,0,0,0.06), 0 1px 1px rgba(0,0,0,0.04));
 }
 
 .navbar__left,
@@ -47,14 +42,16 @@
   font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
+  letter-spacing: 0.2px;
 }
 
 .navlink {
   color: var(--text-primary);
-  opacity: 0.7;
+  opacity: 0.75;
   text-decoration: none;
   padding: 6px 10px;
   border-radius: 8px;
+  display: inline-block;
 }
 
 .navlink.active {
