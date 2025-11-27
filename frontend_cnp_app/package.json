@@ -2,6 +2,9 @@
   "name": "react-kavia",
   "version": "0.2.0",
   "private": true,
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.3",
     "d3": "^7.9.0",
@@ -17,7 +20,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "echo \"Note: Using --legacy-peer-deps may be required in some environments due to CRA peer TS@^4. If CI fails install, use npm ci --legacy-peer-deps.\""
   },
   "eslintConfig": {
     "extends": "react-app"

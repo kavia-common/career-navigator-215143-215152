@@ -78,6 +78,13 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/a
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-### `npm run build` fails to minify
+### Dependency install note (TypeScript + CRA)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Create React App (react-scripts@5) declares a peerOptional dependency on TypeScript ^3 or ^4.  
+This project uses TypeScript 5.x and works fine, but npm may error on install due to peer resolution.  
+If you encounter installation issues, use:
+
+- npm ci --legacy-peer-deps
+- or npm install --legacy-peer-deps
+
+This is a known ecosystem mismatch and does not affect runtime.
