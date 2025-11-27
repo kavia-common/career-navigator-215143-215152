@@ -40,7 +40,6 @@ export default function Dashboard(): JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      // 1) Ensure authenticated and load profile id + target role
       const { data: authRes } = await supabase.auth.getUser();
       const uid = authRes.user?.id || null;
       if (!uid) {
@@ -59,7 +58,6 @@ export default function Dashboard(): JSX.Element {
       const trg = prof.data?.role_target_code || null;
       setTargetRoleCode(trg);
 
-      // 2) Fetch readiness/gap via rpc
       if (uid && trg) {
         const gap = await rpcGapAnalysis(uid, trg);
         if (gap.error) {
@@ -77,18 +75,16 @@ export default function Dashboard(): JSX.Element {
               traffic: row.traffic || deriveTraffic(row.profile_level, row.role_target),
             }))
           );
-          setReadiness(Number(d.readiness ?? 0));
-          setOverlap(Number(d.overlap ?? 0));
+          setReadiness(typeof d.readiness === "number" ? d.readiness : d.readiness_pct ?? Number(d.readiness ?? 0));
+          setOverlap(typeof d.overlap === "number" ? d.overlap : d.overlap_pct ?? Number(d.overlap ?? 0));
         }
       }
 
-      // 3) Evidence list
       const ev = await listEvidence();
       if (!ev.error) {
         setEvidence(ev.data);
       }
 
-      // 4) KPI counts via recompute endpoint (also persists if table exists)
       if (uid) {
         const kpi = await rpcRecomputeProfile(uid, targetRoleCode || undefined);
         if (!kpi.error) {
@@ -132,7 +128,6 @@ export default function Dashboard(): JSX.Element {
         setKpiCounts(k?.counts || null);
         if (typeof k?.readiness === "number") setReadiness(k.readiness);
         if (typeof k?.overlap === "number") setOverlap(k.overlap);
-        // Also refresh gaps from rpc_gap_analysis for most up-to-date breakdown
         if (targetRoleCode) {
           const gap = await rpcGapAnalysis(profileId, targetRoleCode);
           if (!gap.error) {
@@ -181,7 +176,6 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
-  // Styles (minimalist Ocean Professional)
   const chip = (label: string, value?: string | number | null) => (
     <div style={{
       padding: "8px 12px",
@@ -220,7 +214,6 @@ export default function Dashboard(): JSX.Element {
         </div>
       ) : (
         <>
-          {/* KPIs */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {chip("Target Role", targetRoleCode || "Not set")}
             {chip("Readiness", readiness != null ? `${Math.round(readiness * 100)}%` : "-")}
@@ -245,7 +238,6 @@ export default function Dashboard(): JSX.Element {
             </button>
           </div>
 
-          {/* Top Gaps */}
           <div style={{ marginTop: 8 }}>
             <h2 style={{ fontSize: 18, color: "#111827", marginBottom: 8 }}>Top Competency Gaps</h2>
             {topGaps.length === 0 ? (
@@ -281,7 +273,6 @@ export default function Dashboard(): JSX.Element {
             )}
           </div>
 
-          {/* Recent Evidence */}
           <div style={{ marginTop: 8 }}>
             <h2 style={{ fontSize: 18, color: "#111827", marginBottom: 8 }}>Recent Evidence</h2>
             {evidence.length === 0 ? (
@@ -308,7 +299,6 @@ export default function Dashboard(): JSX.Element {
             )}
           </div>
 
-          {/* Quick Actions */}
           <div style={{ marginTop: 8 }}>
             <h2 style={{ fontSize: 18, color: "#111827", marginBottom: 8 }}>Quick Actions</h2>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
